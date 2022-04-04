@@ -18,7 +18,7 @@ NASM        = nasm
 NASMOPT64   = -g -f elf64 -F dwarf
 LDOPT64     =
 CFLAGS      = -Wall -g -std=gnu11 -O2 -fno-inline-small-functions -static
-INCDIR      = ../syscall/
+INCDIR      = ./
 
 TARGETS     = timediff list_test
 
