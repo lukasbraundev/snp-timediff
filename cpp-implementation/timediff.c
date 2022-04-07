@@ -111,7 +111,8 @@ int main(void) {
     printf("%ld.%06d\n", timestamps[i].tv_sec, timestamps[i].tv_usec);
 
     // check if display the date is necessary
-    if (diffDays > 0) printf("%ld days, ", diffDays);
+    if (diffDays > 1) printf("%ld days, ", diffDays);
+    if (diffDays == 1) printf("%ld day, ", diffDays);
     printf("%02ld:%02ld:%02ld.%06ld\n", diffHours, diffMinutes, diffSeconds, diffMS);
 
   }
