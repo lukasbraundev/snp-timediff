@@ -1,13 +1,11 @@
+// gcc timediff.c -o exe.out; cat testinput | ./exe.out
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-// #include <sys/time.h>
 #include <assert.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-// gcc timediff.c list.c -o exe.out; cat testinput | ./exe.out
 
 // function prototypes
 extern void list_init(void);
@@ -18,8 +16,6 @@ extern short list_find(struct timeval *tv);
 extern bool list_get(struct timeval *tv, short idx);
 
 int main(void) {
-
-  // printf("Main\n");
 
   // get the input from stdin
   int bufferSize = 10000 // max number of timestamps
@@ -51,11 +47,9 @@ int main(void) {
     if (inputText[i] == '\n' || inputText[i] == '.') {
       partCount++;
       charCount = 0;
-      // printf("break!at: %c\n", inputText[i]);
     } else {
       inputParts[partCount][charCount] = inputText[i];
       charCount++;
-      // printf("charCount: %d char: %c\n", charCount, inputText[i]);
     }
   }
 
@@ -72,10 +66,8 @@ int main(void) {
     timestampIdx = (i / 2);
 
     if (i % 2 == 0) {
-      // printf("adding tv_sec\n");
       timestamps[timestampIdx].tv_sec = atoi(currentString);
     } else {
-      // printf("adding tv_usec\n");
       timestamps[timestampIdx].tv_usec = atoi(currentString);
     }
   }
