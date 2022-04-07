@@ -9,7 +9,7 @@
 ; Architecture:  x86-64
 ; Language:      NASM Assembly Language
 ;
-; Authors:
+; Authors:       Johannes Brandenburger, Lukas Braun, Henry Schuler
 ;
 ;----------------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ SECTION .text
 
 
 ;-----------------------------------------------------------------------------
-; extern void list(void)
+; extern void list_init(void)
 ;-----------------------------------------------------------------------------
         global list_init:function
 list_init:

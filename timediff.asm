@@ -33,7 +33,7 @@ SECTION .data
 ; SECTION BSS
 ;-----------------------------------------------------------------------------
 SECTION .bss
-        timestamp_input resb 101280
+        timestamp_input resb 128
 
 ;-----------------------------------------------------------------------------
 ; SECTION TEXT
@@ -52,14 +52,14 @@ readNextTimestamp:
         ; Write the initial User Message
         mov eax, sys_write              ; Sys-Call Number (Write)
         mov ebx, stdout                 ; file discriptor (STD OUT)
-        mov ecx, userMsg                ; length of the Message
-        mov edx, lenUserMsg             ; Message to write
+        mov ecx, userMsg                ; Message to write
+        mov edx, lenUserMsg             ; length of the Message
         int 80h                         ; call Kernel
 
         ;Read and store the user input
         mov eax, sys_read               ; Sys-Call Number (Read)
         mov ebx, stdin                  ; file discriptor (STD IN)
-        mov ecx, timestamp_input        ; input ist stored into timestamp_input
+        mov ecx, timestamp_input        ; input is stored into timestamp_input
         mov edx, 128                    ; size of Input
         int 80h                         ; call Kernel
 
