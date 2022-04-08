@@ -25,7 +25,7 @@ TARGETS     = timediff list_test
 .PHONY: all
 all: $(TARGETS)
 
-timediff : timediff.o list.o
+timediff : timediff.o list.o error_handler.o
 	$(LD) $(LDOPT64) -o $@ $^
 
 timediff.o : $(INCDIR)/syscall.inc
