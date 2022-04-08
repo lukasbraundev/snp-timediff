@@ -13,6 +13,8 @@
 ;
 ;----------------------------------------------------------------------------
 
+SECTION .data
+        list_address    dq 0
 
 ;-----------------------------------------------------------------------------
 ; SECTION TEXT
@@ -29,6 +31,7 @@ list_init:
         mov     rbp,rsp
 
         ; your code goes here
+        ; create array and store base-address at list_address
 
         mov     rsp,rbp
         pop     rbp
