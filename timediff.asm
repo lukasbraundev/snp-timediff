@@ -17,8 +17,16 @@
 
 %include "syscall.inc"  ; OS-specific system call macros
 
-extern list_init
 
+;---Function declerations----------------------------------------------------
+extern displayError
+extern list_init
+extern list_size
+extern list_is_sorted
+extern list_add
+extern list_find
+extern list_get
+;----------------------------------------------------------------------------
 sys_read equ 3
 sys_write equ 4
 stdout equ 1
@@ -31,9 +39,9 @@ SECTION .data
         userMsg db 'Please enter a timestamp (to end write "F"): ' ;Message to ask the User to Enter a new timestamp
         lenUserMsg equ $-userMsg                ;The length of the message
 
-        timeval:
-                tv_sec  dq 0
-                tv_usec dq 0
+timeval:
+        tv_sec  dq 0
+        tv_usec dq 0
 
 ;-----------------------------------------------------------------------------
 ; SECTION BSS
@@ -52,8 +60,6 @@ SECTION .text
         global _start:function          ; make label available to linker
 
 _start:                                 ; Programm Start
-
-        call list_init
 
 readNextTimestamp:
         
