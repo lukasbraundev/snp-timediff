@@ -34,6 +34,8 @@ sys_write equ 4
 stdout equ 1
 stdin equ 2
 
+BUFFER_SIZE equ 80
+
 ;-----------------------------------------------------------------------------
 ; SECTION DATA
 ;-----------------------------------------------------------------------------
@@ -55,6 +57,10 @@ timeval:
 ;-----------------------------------------------------------------------------
 SECTION .bss
         timestamp_input resb 128
+                align 128               ; make sure that buffer adress is a multiple of 128
+        buffer  resb BUFFER_SIZE        ; buffersize for input
+                resb 128                ; zero after buffer so that buffer end can be determined
+
 
 ;-----------------------------------------------------------------------------
 ; SECTION TEXT
@@ -92,37 +98,30 @@ _start:                                 ; Programm Start
 
 ; Beispiel END
 
-readNextTimestamp:
-        
-        ; Write the initial User Message
-        mov eax, sys_write              ; Sys-Call Number (Write)
-        mov ebx, stdout                 ; file discriptor (STD OUT)
-        mov ecx, userMsg                ; Message to write
-        mov edx, lenUserMsg             ; length of the Message
-        int 80h                         ; call Kernel
-
-        ;Read and store the user input
+read_next_string:
+        ; Read from STD in
         mov eax, sys_read               ; Sys-Call Number (Read)
         mov ebx, stdin                  ; file discriptor (STD IN)
-        mov ecx, timestamp_input        ; input is stored into timestamp_input
-        mov edx, 128                    ; size of Input
+        mov ecx, buffer                 ; input is stored into timestamp_input
+        mov edx, BUFFER_SIZE            ; size of Input
         int 80h                         ; call Kernel
 
-        ;Compare if timestamp is F
-        lea     rsi, [timestamp_input]  ; load the address of buffer to rsi
-        movzx   rdx, byte [rsi]         ; load first char to
-        cmp     rdx, 70                 ; check if first char is "F"
-        je      finishedInput           ; if its F input is finished
-        ;TODO --> Add to list
-        jne     readNextTimestamp       ; not F input not finished
+        test eax, eax                   ; check Return value
+        jz finishedInput                ; jump to calculation if buffer empty
+        lea rsi, [buffer]               ; loads adress of first char into rsi
+        mov byte [buffer+rax], 128      ; determines the End of the Buffer
+
+next_char:      
+        movzx   rdx, byte [rsi]         ; load next char from buffer
+        cmp     rdx,127                 ; check if its a char
+        ja      read_next_string        ; jump if no char
+        ; TODO Move char in variable if not a linefeed
+        ; if linefeed, than check variable for correct synthax
+
+
 
 finishedInput:
-        ;Test Purpose to test the Jump
-        mov eax, sys_write              ; Sys-Call Number (Write)
-        mov ebx, stdout                 ; file discriptor (STD OUT)
-        mov ecx, userMsg                ; Message to write
-        mov edx, lenUserMsg             ; length of the Message
-        int 80h                         ; call Kernel
+        nop
 
         ;-----------------------------------------------------------
         ; call system exit and return to operating system / shell
