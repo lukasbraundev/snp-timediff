@@ -34,8 +34,10 @@ SECTION .data
         errorMsg db 'Error in list.asm!' ; error message
         lenErrorMsg equ $-errorMsg       ; length of the error message
         intInAscii db '                ' ; buffer for the debug output
-        formatStr:
+        formatStrInt:
 	        db `---> rax: %ld\n`, 0
+        formatStrString:
+	        db `- %c: `, 0
 ;-----------------------------------------------------------------------------
 ; extern void list_init(void)
 ;-----------------------------------------------------------------------------
@@ -88,17 +90,66 @@ list_is_sorted:
         push    rbp
         mov     rbp,rsp
 
+        ; push all used registers onto the stack
+        ; push    rbx
+        ; push    rcx
+        ; push    rax
+        ; push    r8
+        ; push    r9
 
-loop_check_if_sorted:        
+        ; immediately return false if the list is empty
+        mov     rax, [listSize]       ; load the size of the list into rax
+        cmp     rax, 0                ; check if the list is empty
+        je      exit_not_sorted       ; if so, return false
 
+        ; check if the list is sorted
+        mov     rbx, [startAdress]    ; load the start adress of the list into rax
+        mov     rcx, 1                ; set counter to 1
+        mov     rdx, 1                ; set return value to true
+
+loop_check_if_sorted: 
+
+        mov     r8, [rbx]             ; load the first element of the list into rbx 
+        mov     r9, [rbx+16]          ; load the second element of the list into rdi
+
+        cmp     r9, r8                ; check if the first element is smaller than the second element
+        jl      exit_not_sorted       ; if not, return false
+        jg      already_bigger_tv_sec
+
+        mov     r8, [rbx+8]           ; load the first element of the list into rbx 
+        mov     r9, [rbx+24]          ; load the second element of the list into rdi
+
+        cmp     r9, r8                ; check if the first element is smaller than the second element
+        jle     exit_not_sorted       ; if not, return false
+
+already_bigger_tv_sec:
+
+        add     rbx, 16                ; add the size of the list elements to the start adress of the list
+        inc     rcx                    ; increment the counter
+        cmp     rcx, [listSize]        ; check if the counter is equal to the size of the list
+        je      exit_loop_check_if_sorted  ; if so, the list is gone through -> return true
+        jne     loop_check_if_sorted   ; if not, go to the beginning of the loop
+
+
+exit_not_sorted:
+
+        mov     rdx, 0                 ; return false
 
 exit_loop_check_if_sorted:
+        mov     rax, rdx               ; return the return value
+        push    rax                    ; push the return value into the stack
 
-
+        ; pop     r8                     ; pop the used registers from the stack TODO: why isn't this working?
+        ; pop     r9
+        ; pop     rax
+        ; pop     rcx
+        ; pop     rbx
 
         mov     rsp,rbp
         pop     rbp
         ret
+
+
 
 
 ;-----------------------------------------------------------------------------
@@ -106,15 +157,17 @@ exit_loop_check_if_sorted:
 ;-----------------------------------------------------------------------------
         global list_add:function
 list_add:
+
         push    rbp
-        mov     rbp,rsp
-        
-        push    rcx                     ; save rcx
+        mov     rbp, rsp
+        push    rbx
+        push    rcx
+        push    rdx
+
 
         ; mov     rax, [listSize]         ; DEBUG: load the size of the list into rax
         ; call    print_int_rax           ; DEBUG: print the size of the list        
-
-        mov     rbx, [startAdress]      ; load the start adress of the program in rax
+        mov     rbx, [startAdress]      ; load the start adress of the list in rax
         xor     rcx, rcx                ; clear rcx (counter = 0)
 
 loop_to_get_right_adress:
@@ -130,32 +183,33 @@ loop_to_get_right_adress:
 exit_loop_to_get_right_adress:
         
         mov     rax, rbx                ; load the current adress in rax
-        call    print_int_rax           ; DEBUG: print the current adress
+        ; call    print_int_rax           ; DEBUG: print the current adress
 
         mov     rax, [rdi]              ; load the timeval.tv_sec into rax
-        call    print_int_rax           ; DEBUG: print timeval.tv_sec
+        ; call    print_int_rax           ; DEBUG: print timeval.tv_sec
         mov     [rbx], rax              ; load the timeval.tv_sec into memory at the right adress (startAdress + 16*listSize)
         
         mov     rax, [rdi+8]            ; load the timeval.tv_usec into rax
-        call    print_int_rax           ; DEBUG: print timeval.tv_usec
+        ; call    print_int_rax           ; DEBUG: print timeval.tv_usec
         mov     [rbx + 8], rax          ; load the timeval.tv_usec into memory at the right adress (startAdress + 16*listSize + 8)
         
-        mov     rax, [startAdress]      ; DEBUG: load the first adress of the list into rax
-        mov     rax, [rax]              ; DEBUG: load the first value of the list into rax
-        call    print_int_rax           ; DEBUG: print the first value of the list
+        ; mov     rax, [startAdress]      ; DEBUG: load the first adress of the list into rax
+        ; mov     rax, [rax]              ; DEBUG: load the first value of the list into rax
+        ; call    print_int_rax           ; DEBUG: print the first value of the list
 
         mov     rax, [listSize]         ; load the size of the list into rax
-        call    print_int_rax           ; DEBUG: print the new size of the list
+        ; call    print_int_rax           ; DEBUG: print the new size of the list
         inc     rax                     ; increase the size of the list by 1
         mov     [listSize], rax         ; save the new size of the list in listSize
         dec     rax                     ; decrease the size of the list by 1 to get current position
         push    rax                     ; return the current position of the list
 
-        pop     rcx                     ; restore rcx (NOTE: doens't this just get the value of rax?)
+        pop     rdx
+        pop     rcx
+        pop     rbx
 
-        mov     rsp,rbp
+        mov     rsp, rbp
         pop     rbp
-        ret
 
 
 ;-----------------------------------------------------------------------------
@@ -166,7 +220,49 @@ list_find:
         push    rbp
         mov     rbp,rsp
 
-        ; your code goes here
+        mov     r8, [rdi]                   ; load the struct timeval.tv_sec into r8
+        mov     r9, [rdi+8]                 ; load the struct timeval.tv_usec into r9
+
+        ; mov     rax, r8                     ; DEBUG: load the timeval.tv_sec into rax
+        ; call    print_int_rax               ; DEBUG: print the timeval.tv_sec
+        ; mov     rax, r9                     ; DEBUG: load the timeval.tv_usec into rax
+        ; call    print_int_rax               ; DEBUG: print the struct timeval.tv_usec
+
+        mov     rbx, [startAdress]          ; load the start adress of the list into rbx
+        xor     rcx, rcx                    ; clear rcx (counter = 0)
+
+list_find_loop:
+
+        cmp     rcx, [listSize]             ; check if the counter is bigger than the size of the list
+        je      list_find_not_found         ; if so, return -1
+
+        mov     rax, [rbx]                  ; load the current tv_sec of the list into rax
+        cmp     rax, r8                     ; check if the current tv_sec is equal to the tv_sec of the searched timeval
+        jne     list_find_skip_check_usec   ; if not equal, go to the next element of the list
+
+        mov     rax, [rbx+8]                ; load the current tv_usec of the list into rax
+        cmp     rax, r9                     ; check if the current tv_usec is equal to the tv_usec of the searched timeval
+        je      list_find_match             ; if so -> match -> return the current position of the list
+
+list_find_skip_check_usec
+
+        add     rbx, 16                     ; add 16 to the current adress
+        inc     rcx                         ; increment the counter
+        jmp     list_find_loop
+
+list_find_not_found:
+
+        mov     rax, -1                     ; return -1 to indicate that the searched timeval was not found
+        push    rax                         ; return the return value
+
+        mov     rsp,rbp
+        pop     rbp
+        ret
+
+list_find_match:
+
+        mov     rax, rcx                    ; return the current position of the list
+        push    rax                         ; return the return value
 
         mov     rsp,rbp
         pop     rbp
@@ -186,6 +282,8 @@ list_get:
         mov     rsp,rbp
         pop     rbp
         ret
+
+
 
 exit:
         push    rbp
@@ -208,13 +306,23 @@ print_int_rax:
         push    rsi 
         push    rax
         push    rdi
+        push    r8
+        push    r9
+        push    rbx
+        push    rcx
+        push    rdx
 
-        mov     rdi, formatStr          ; first argument: format string
-        mov     rsi, rax                  ; second argument (for format string below): integer to print
+        mov     rdi, formatStrInt       ; first argument: format string
+        mov     rsi, rax                ; second argument (for format string below): integer to print
         mov     al, 0                   ; magic for varargs (0==no magic, to prevent a crash!)
 
-        call printf
+        call    printf
         
+        pop     rdx
+        pop     rcx
+        pop     rbx
+        pop     r9
+        pop     r8
         pop     rdi
         pop     rax
         pop     rsi
@@ -222,3 +330,5 @@ print_int_rax:
         mov     rsp, rbp
         pop     rbp
         ret
+
+
