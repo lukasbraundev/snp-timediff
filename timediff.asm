@@ -292,7 +292,7 @@ _start:                                 ; Programm Start
         int 80h
 
         cmp rax, 0                              ; check if sys_brk was successful (-1 if not)
-        jl memory_error                         ; exit because memory could not be allocated
+        jl .memory_error                         ; exit because memory could not be allocated
 
         ; memory is allocated
         pop rbx                                 ; restore rbx
