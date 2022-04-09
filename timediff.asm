@@ -17,6 +17,8 @@
 
 %include "syscall.inc"  ; OS-specific system call macros
 
+extern ASCII_to_timeval
+extern timeval_to_ASCII
 
 ;---Function declerations----------------------------------------------------
 extern displayError
@@ -43,6 +45,11 @@ timeval:
         tv_sec  dq 0
         tv_usec dq 0
 
+        timestamp db '97.98'
+        lenTimestamp equ $-timestamp
+        time_char db '10000 00000000000000.000000'
+        lenTimeChar equ $-time_char
+
 ;-----------------------------------------------------------------------------
 ; SECTION BSS
 ;-----------------------------------------------------------------------------
@@ -60,6 +67,30 @@ SECTION .text
         global _start:function          ; make label available to linker
 
 _start:                                 ; Programm Start
+
+; Beispiel implementation of the function ASCII_to_timeval
+        ; push WORD lenTimestamp
+        ; push timestamp
+        ; push timeval
+        ; call ASCII_to_timeval
+        ; add rsp, 18
+
+        ; cmp rax, 0                      ; check if conversion was successful
+        ; je readNextTimestamp            ; if not, read next timestamp
+
+        ; push timeval
+        ; push time_char
+        ; call timeval_to_ASCII
+        ; add rsp, 16
+
+        ; Write time_char
+        ; mov eax, sys_write              ; Sys-Call Number (Write)
+        ; mov ebx, stdout                 ; file discriptor (STD OUT)
+        ; mov ecx, time_char              ; Message to write
+        ; mov edx, lenTimeChar            ; length of the Message
+        ; int 80h                         ; call Kernel
+
+; Beispiel END
 
 readNextTimestamp:
         
@@ -89,8 +120,8 @@ finishedInput:
         ;Test Purpose to test the Jump
         mov eax, sys_write              ; Sys-Call Number (Write)
         mov ebx, stdout                 ; file discriptor (STD OUT)
-        mov ecx, userMsg                ; length of the Message
-        mov edx, lenUserMsg             ; Message to write
+        mov ecx, userMsg                ; Message to write
+        mov edx, lenUserMsg             ; length of the Message
         int 80h                         ; call Kernel
 
         ;-----------------------------------------------------------
