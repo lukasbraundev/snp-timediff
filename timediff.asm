@@ -161,7 +161,10 @@ _start:                                 ; Programm Start
         ; int 80h                         ; call Kernel
 
 ; Example: END
-
+        ;------------------------------------------------------
+        ; Startig with the Input
+        ; Author: Lukas Braun
+        ;------------------------------------------------------
 .init:
         mov r12, 0                      ; ctr for the possible timechar index
 
@@ -173,7 +176,7 @@ _start:                                 ; Programm Start
         mov rdx, BUFFER_SIZE            ; size of Input
         int 80h                         ; call Kernel
         test    rax,rax                 ; check system call return value
-        jz      .finishedInput          ; jump to exit if nothing is read (end)
+        jz      .finshed_input          ; jump to exit if nothing is read (end)
         lea rsi, [buffer]               ; loads adress of first char into rsi
         mov byte [buffer+rax], 128      ; determines the End of the Buffer
 
@@ -182,19 +185,15 @@ _start:                                 ; Programm Start
         cmp     dl,127                  ; check if its a char
         ja      .read_next_string        ; jump if no char
         cmp     r12, 27                 ; check if input length is max
-        je      .max_input_error
-        cmp     dl, 10                  ; check for linefeed TODO, check for end of file
+        je      .input_error
+        cmp     dl, 10                  ; check for linefeed
         je      .timestamp_finished      ; jump if timestamp detected
         mov     [possible_timechar + r12], dl
         inc r12                         ; inc possible timechar index
         inc rsi                         ; inc adress in Buffer
         jmp .next_char
 
-.max_input_error:
-        push WORD 0                    ; push idx of error Msg
-        call displayError              ; function call
-        add rsp, 2
-        jmp .exit
+
 
 .timestamp_finished:
         ; print placeholder for testing purpose
@@ -218,8 +217,7 @@ _start:                                 ; Programm Start
         pop rdx                         ; get register back from stack
         pop rsi                         ; get register back from stack
         cmp rax, 0                      ; check if conversation was false
-        je .exit                        ; if so, exit programnm
-        ; ----- TODO: Error Message -------- ;
+        je .input_error                 ; if so, exit programnm
         
         ; call short list_add(struct timeval *tv)
         push rsi
@@ -231,16 +229,16 @@ _start:                                 ; Programm Start
         ; addList() Funktion aufrufen TODO Rückgabewert überprüfen
         ; placeholder reinitialize
         mov r12, 0
-.loop_reinit_placeholder:                ; mov ' ' on each index of possible_timechar
+.loop_reinit_placholder:                ; mov ' ' on each index of possible_timechar
         mov dl, byte 32
         mov [possible_timechar + r12], dl      ;mov ' ' 
         inc r12
         cmp r12, 27
-        jne .loop_reinit_placeholder
+        jne .loop_reinit_placholder
         mov r12, 0                      ; reset indexctr for possible_timestamp
         inc rsi                         ; inc buffer index for next char
         jmp .next_char                   ; start reading the next timestamp
-.finishedInput:
+.finshed_input:
         ; Ausführung der weiteren methoden / berechnung der differenz usw.
         nop
 
@@ -255,12 +253,12 @@ _start:                                 ; Programm Start
         call list_size                          ; get the amount of timestamps in the list
         mov [amountOfTimestamps], ax            ; store the amount of timestamps in the list
         cmp WORD [amountOfTimestamps], 0        ; check if the list is empty
-        je .exit                                ; TODO: exit because no input
+        je .input_error                         ; exit because no input
 
         ; call bool list_is_sorted(void)
         call list_is_sorted                     ; check if the list is sorted
         cmp rax, 0                              ; check if false
-        je .exit                                ; TODO: exit because list not sorted
+        je .not_sorted_error                    ; exit because list not sorted
 
         ; min. 1 timestamp in list and list is sorted
 .calculate_required_memory:
@@ -284,7 +282,7 @@ _start:                                 ; Programm Start
         int 80h                                 ; call kernel -> first breakpoint
 
         cmp rax, 0                              ; check if sys_brk was successful (-1 if not)
-        jl .exit                                ; TODO: exit because memory could not be allocated
+        jl .memory_error                        ; exit because memory could not be allocated
         mov [outputAddress], rax                ; store the address of the allocated memory in outputAddress
 
         ; set the second breakpoint
@@ -294,7 +292,7 @@ _start:                                 ; Programm Start
         int 80h
 
         cmp rax, 0                              ; check if sys_brk was successful (-1 if not)
-        jl .exit                                ; TODO: exit because memory could not be allocated
+        jl memory_error                         ; exit because memory could not be allocated
 
         ; memory is allocated
         pop rbx                                 ; restore rbx
@@ -424,6 +422,29 @@ _start:                                 ; Programm Start
         mov rcx, [outputAddress]
         mov rdx, [requiredMemory]
         int 80h
+        jmp .exit
+
+        ;------------------------------------------------------
+        ; Jump Labels to call the Error handler
+        ; Author: Lukas Braun
+        ;------------------------------------------------------
+.input_error:
+        push WORD 0                    ; push idx of error Msg
+        call displayError              ; function call
+        add rsp, 2
+        jmp .exit
+
+.not_sorted_error:
+        push WORD 1                    ; push idx of error Msg
+        call displayError              ; function call
+        add rsp, 2
+        jmp .exit
+
+.memory_error:
+        push WORD 3                    ; push idx of error Msg
+        call displayError              ; function call
+        add rsp, 2
+        jmp .exit
 
         ;-----------------------------------------------------------
         ; OUTPUT IS DONE, EXIT PROGRAM
