@@ -88,7 +88,13 @@ list_is_sorted:
         push    rbp
         mov     rbp,rsp
 
-        ; your code goes here
+
+loop_check_if_sorted:        
+
+
+exit_loop_check_if_sorted:
+
+
 
         mov     rsp,rbp
         pop     rbp
@@ -105,14 +111,8 @@ list_add:
         
         push    rcx                     ; save rcx
 
-        mov     rax, [listSize]         ; DEBUG: load the size of the list into rax
-        call    print_int_rax           ; DEBUG: print the size of the list
-
-        mov     rax, rdi                ; load the parameter (struct timeval *tv) in rax
-        mov     rdi, [rax]              ; load the actual timeval from memory adress in rdi
-        mov     rax, rdi                ; DEBUG: load the value in rax (just to print out)
-        call    print_int_rax           ; DEBUG: print the timeval
-        
+        ; mov     rax, [listSize]         ; DEBUG: load the size of the list into rax
+        ; call    print_int_rax           ; DEBUG: print the size of the list        
 
         mov     rbx, [startAdress]      ; load the start adress of the program in rax
         xor     rcx, rcx                ; clear rcx (counter = 0)
@@ -132,13 +132,20 @@ exit_loop_to_get_right_adress:
         mov     rax, rbx                ; load the current adress in rax
         call    print_int_rax           ; DEBUG: print the current adress
 
-        mov     [rbx], rdi              ; load the timeval into memory at the right adress (startAdress + 16*listSize)
-        mov     eax, [startAdress+48]   ; DEBUG: load the second value of the list into rax
-        call    print_int_rax           ; DEBUG:print the second value of the list
-
+        mov     rax, [rdi]              ; load the timeval.tv_sec into rax
+        call    print_int_rax           ; DEBUG: print timeval.tv_sec
+        mov     [rbx], rax              ; load the timeval.tv_sec into memory at the right adress (startAdress + 16*listSize)
+        
+        mov     rax, [rdi+8]            ; load the timeval.tv_usec into rax
+        call    print_int_rax           ; DEBUG: print timeval.tv_usec
+        mov     [rbx + 8], rax          ; load the timeval.tv_usec into memory at the right adress (startAdress + 16*listSize + 8)
+        
+        mov     rax, [startAdress]      ; DEBUG: load the first adress of the list into rax
+        mov     rax, [rax]              ; DEBUG: load the first value of the list into rax
+        call    print_int_rax           ; DEBUG: print the first value of the list
 
         mov     rax, [listSize]         ; load the size of the list into rax
-        call    print_int_rax          ; DEBUG: print the new size of the list
+        call    print_int_rax           ; DEBUG: print the new size of the list
         inc     rax                     ; increase the size of the list by 1
         mov     [listSize], rax         ; save the new size of the list in listSize
         dec     rax                     ; decrease the size of the list by 1 to get current position
