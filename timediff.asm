@@ -19,6 +19,7 @@
 
 extern ASCII_to_timeval
 extern timeval_to_ASCII
+extern timeval_to_daystring
 
 ;---Function declerations----------------------------------------------------
 extern displayError
@@ -45,11 +46,16 @@ timeval:
         tv_sec  dq 0
         tv_usec dq 0
 
-; Example: implementation of the function ASCII_to_timeval
-        timestamp db '1234567890.1256'
+; Example: implementation of the function ASCII_to_timeval and timeval_to_ASCII
+        timestamp db '12345678901234567890.123456'
         lenTimestamp equ $-timestamp
-        time_char db 'abcdfghijklmnopqrstu.abcdef', 10
+        time_char db 'abcdfghijklmnopqrstupabcdef', 10
         lenTimeChar equ $-time_char
+; Example: END
+
+; Example: implementation of the function timeval_to_daystring
+        daystring db 'DDDDDDDDDDDDDDD days, HH:MM:SS.UUUUUU', 10
+        lenDaystring equ $-daystring
 ; Example: END
 
 ;-----------------------------------------------------------------------------
@@ -70,26 +76,41 @@ SECTION .text
 
 _start:                                 ; Programm Start
 
-; Example: implementation of the function ASCII_to_timeval
-        ; ; bool ASCII_to_timeval(struct timeval *tv, char *ascii_time, short len)
-        ; mov rdi, timeval
-        ; mov rsi, timestamp
-        ; xor rdx, rdx
-        ; mov dx, lenTimestamp
-        ; call ASCII_to_timeval
-        ; ; rax now holds 1 if successful, 0 if not
+; Example: implementation of the function ASCII_to_timeval and timeval_to_ASCII
+        ; bool ASCII_to_timeval(struct timeval *tv, char *ascii_time, short len)
+        mov rdi, timeval
+        mov rsi, timestamp
+        xor rdx, rdx
+        mov dx, lenTimestamp
+        call ASCII_to_timeval
+        ; rax now holds 1 if successful, 0 if not
 
-        ; ; void timeval_to_ASCII(char *ascii_time, struct timeval *tv)
-        ; mov rdi, time_char
-        ; mov rsi, timeval
-        ; call timeval_to_ASCII
+        ; void timeval_to_ASCII(char *ascii_time, struct timeval *tv)
+        mov rdi, time_char
+        mov rsi, timeval
+        call timeval_to_ASCII
 
-        ; ; Write time_char
-        ; mov eax, sys_write              ; Sys-Call Number (Write)
-        ; mov ebx, stdout                 ; file discriptor (STD OUT)
-        ; mov ecx, time_char              ; Message to write
-        ; mov edx, lenTimeChar            ; length of the Message
-        ; int 80h                         ; call Kernel
+        ; Write time_char
+        mov eax, sys_write              ; Sys-Call Number (Write)
+        mov ebx, stdout                 ; file discriptor (STD OUT)
+        mov ecx, time_char              ; Message to write
+        mov edx, lenTimeChar            ; length of the Message
+        int 80h                         ; call Kernel
+
+; Example: END
+
+; Example: implementation of the function timeval_to_daystring
+        ; void timeval_to_daystring(char *daystring, struct timeval *tv)
+        mov rdi, daystring
+        mov rsi, timeval
+        call timeval_to_daystring
+
+        ; Write daystring
+        mov rax, sys_write              ; Sys-Call Number (Write)
+        mov rbx, stdout                 ; file discriptor (STD OUT)
+        mov rcx, daystring              ; Message to write
+        mov rdx, lenDaystring           ; length of the Message
+        int 80h                         ; call Kernel
 
 ; Example: END
 
