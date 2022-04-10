@@ -86,7 +86,6 @@ list_size:
 
         ; return the list size
         mov     rax, [listSize]       ; load the size of the list into rax
-        push    rax                   ; push the size of the list into the stack (return value)
 
         mov     rsp,rbp
         pop     rbp
@@ -150,7 +149,6 @@ list_is_sorted_loop_exit:
 
         ; all elements are gone through -> return true
         mov     rax, rdx               ; return the return value
-        push    rax                    ; push the return value into the stack
 
         pop     rbx
 
@@ -258,7 +256,6 @@ list_find_not_found:
 
         ; if the loop goes through the whole list and the element was not found, return -1
         mov     rax, -1                     ; return -1 to indicate that the searched timeval was not found
-        push    rax                         ; return the return value
 
         pop     rbx
 
@@ -333,7 +330,6 @@ list_get_done:
 
         ; return true
         mov     rax, 1                     ; return 1 to indicate that the timeval was found and copied to the adress
-        push    rax                        ; return the return value
 
         ; exit the function
         pop     rbx
@@ -345,7 +341,6 @@ list_get_not_found:
 
         ; return false
         mov     rax, 0                     ; return 0 to indicate that the timeval was not found
-        push    rax                        ; return the return value
 
         ; exit the function
         mov     rsp,rbp
@@ -354,7 +349,7 @@ list_get_not_found:
 
 
 
-exit:
+exit:                                      ; TODO: maybe link to error_handler.asm
         push    rbp
         mov     rbp,rsp
         push    rbx
@@ -369,31 +364,3 @@ exit:
         mov     rsp,rbp
         pop     rbp
         ret
-
-
-
-print_int_rax:
-        ; print the value of rax only debug!!!
-        push    rbp
-        mov     rbp, rsp
-        push    rsi 
-        push    rdi
-        push    rbx
-        push    rdx
-
-        mov     rdi, formatStrInt       ; first argument: format string
-        mov     rsi, rax                ; second argument (for format string below): integer to print
-        mov     al, 0                   ; magic for varargs (0==no magic, to prevent a crash!)
-
-        call    printf
-        
-        pop     rdx
-        pop     rbx
-        pop     rdi
-        pop     rsi
-
-        mov     rsp, rbp
-        pop     rbp
-        ret
-
-
