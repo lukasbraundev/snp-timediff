@@ -45,10 +45,12 @@ timeval:
         tv_sec  dq 0
         tv_usec dq 0
 
-        timestamp db '97.98'
+; Example: implementation of the function ASCII_to_timeval
+        timestamp db '1234567890.1256'
         lenTimestamp equ $-timestamp
-        time_char db '10000 00000000000000.000000'
+        time_char db 'abcdfghijklmnopqrstu.abcdef', 10
         lenTimeChar equ $-time_char
+; Example: END
 
 ;-----------------------------------------------------------------------------
 ; SECTION BSS
@@ -68,29 +70,28 @@ SECTION .text
 
 _start:                                 ; Programm Start
 
-; Beispiel implementation of the function ASCII_to_timeval
-        ; push WORD lenTimestamp
-        ; push timestamp
-        ; push timeval
+; Example: implementation of the function ASCII_to_timeval
+        ; ; bool ASCII_to_timeval(struct timeval *tv, char *ascii_time, short len)
+        ; mov rdi, timeval
+        ; mov rsi, timestamp
+        ; xor rdx, rdx
+        ; mov dx, lenTimestamp
         ; call ASCII_to_timeval
-        ; add rsp, 18
+        ; ; rax now holds 1 if successful, 0 if not
 
-        ; cmp rax, 0                      ; check if conversion was successful
-        ; je readNextTimestamp            ; if not, read next timestamp
-
-        ; push timeval
-        ; push time_char
+        ; ; void timeval_to_ASCII(char *ascii_time, struct timeval *tv)
+        ; mov rdi, time_char
+        ; mov rsi, timeval
         ; call timeval_to_ASCII
-        ; add rsp, 16
 
-        ; Write time_char
+        ; ; Write time_char
         ; mov eax, sys_write              ; Sys-Call Number (Write)
         ; mov ebx, stdout                 ; file discriptor (STD OUT)
         ; mov ecx, time_char              ; Message to write
         ; mov edx, lenTimeChar            ; length of the Message
         ; int 80h                         ; call Kernel
 
-; Beispiel END
+; Example: END
 
 readNextTimestamp:
         
