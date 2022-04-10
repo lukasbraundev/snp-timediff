@@ -50,6 +50,7 @@ main(int argc, char *argv[])
     assert(list_is_sorted() == false);
     assert(list_get(&tv_tmp, 0) == false);
     assert(list_get(NULL, 0) == false);
+    assert(list_get(&tv_tmp, -1) == false);
 
     // NOTE: while loop not terminading maybe fuckt up some registers
     int idx = 0;
@@ -64,21 +65,20 @@ main(int argc, char *argv[])
         printf("pos: %d\n", pos);
         assert(pos == idx);
     }
-
-    // NOTE: everything works except for the get end memcmp
+    
     assert(list_size() == idx);
     assert(list_is_sorted() == true);
 
-    // assert(list_get(&tv_tmp, 0) == true);
-    // assert(memcmp(&tv_tmp, &timestamps[0], sizeof(struct timeval)) == 0);
+    assert(list_get(&tv_tmp, 0) == true);
+    assert(memcmp(&tv_tmp, &timestamps[0], sizeof(struct timeval)) == 0);
     assert(list_find(&timestamps[0]) == 0);
 
-    // assert(list_get(&tv_tmp, idx/2) == true);
-    // assert(memcmp(&tv_tmp, &timestamps[idx/2], sizeof(struct timeval)) == 0);
+    assert(list_get(&tv_tmp, idx/2) == true);
+    assert(memcmp(&tv_tmp, &timestamps[idx/2], sizeof(struct timeval)) == 0);
     assert(list_find(&timestamps[idx/2]) == idx/2);
 
-    // assert(list_get(&tv_tmp, idx-1) == true);
-    // assert(memcmp(&tv_tmp, &timestamps[idx-1], sizeof(struct timeval)) == 0);
+    assert(list_get(&tv_tmp, idx-1) == true);
+    assert(memcmp(&tv_tmp, &timestamps[idx-1], sizeof(struct timeval)) == 0);
     assert(list_find(&timestamps[idx-1]) == idx-1);
 
     struct timeval tv = {1700000000, 0};
