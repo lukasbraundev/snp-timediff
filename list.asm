@@ -17,7 +17,7 @@ sys_read equ 3
 sys_write equ 4
 stdout equ 1
 stdin equ 2
-extern printf
+
 
 ;-----------------------------------------------------------------------------
 ; SECTION TEXT
