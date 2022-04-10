@@ -17,14 +17,10 @@
 ; SECTION DATA
 ;-----------------------------------------------------------------------------
 SECTION .data
-	value db 0
         tvBase dq 0
 	ascii_timeBase dq 0
 	ascii_timeLen dw 0
 	dotIndex db 0
-	lenBeforeDot db 0
-        userMsg db 'Please enter a timestamp (to end write "F"): ' ;Message to ask the User to Enter a new timestamp
-        lenUserMsg equ $-userMsg                ;The length of the message
 
 ;-----------------------------------------------------------------------------
 ; SECTION TEXT
