@@ -9,7 +9,7 @@
 ; Architecture:  x86-64
 ; Language:      NASM Assembly Language
 ;
-; Authors:       Johannes Brandenburger, Lukas Braun, Henry Schuler
+; Authors:       Henry Schuler
 ;
 ;----------------------------------------------------------------------------
 
