@@ -42,10 +42,12 @@ SECTION .data
 ;-----------------------------------------------------------------------------
 ; extern void list_init(void)
 ;-----------------------------------------------------------------------------
-        global list_init:function       ; NOTE: to check if registers should be saved in stack; rest is working and tested
-list_init:                              ; TODO: check if 10 000 ts can be stored in the list
+        global list_init:function
+list_init:
         push    rbp
         mov     rbp,rsp
+
+        push    rbx
 
         ; set the first breakpoint (start of the list)
         mov	rax, 45		        ; load sys_brk (allocate mem) into eax
@@ -66,6 +68,8 @@ list_init:                              ; TODO: check if 10 000 ts can be stored
         ; check if the second breakpoint was set correctly
         cmp	rax, 0                  ; check if the allocation was successful (-1 if not)
         jl	exit	                ; if not, exit the program 
+
+        pop     rbx
 
         mov     rsp,rbp
         pop     rbp
@@ -92,17 +96,12 @@ list_size:
 ;-----------------------------------------------------------------------------
 ; extern bool list_is_sorted(void);
 ;-----------------------------------------------------------------------------
-        global list_is_sorted:function ; NOTE: to check if registers should be saved in stack; rest is working and tested
+        global list_is_sorted:function
 list_is_sorted:
         push    rbp
         mov     rbp,rsp
 
-        ; push all used registers onto the stack
-        ; push    rbx
-        ; push    rcx
-        ; push    rax
-        ; push    r8
-        ; push    r9
+        push    rbx
 
         ; immediately return false if the list is empty
         mov     rax, [listSize]       ; load the size of the list into rax
@@ -153,11 +152,7 @@ list_is_sorted_loop_exit:
         mov     rax, rdx               ; return the return value
         push    rax                    ; push the return value into the stack
 
-        ; pop     r8                   ; pop the used registers from the stack NOTE: why isn't this working?
-        ; pop     r9
-        ; pop     rax
-        ; pop     rcx
-        ; pop     rbx
+        pop     rbx
 
         mov     rsp,rbp
         pop     rbp
@@ -168,77 +163,71 @@ list_is_sorted_loop_exit:
 ;-----------------------------------------------------------------------------
 ; extern short list_add(struct timeval *tv);
 ;-----------------------------------------------------------------------------
-        global list_add:function ; NOTE: is working but inside a while loop it crashes some registers TODO: fix this (how?)!
+        global list_add:function
 list_add: 
 
         push    rbp
         mov     rbp, rsp
+
         push    rbx
-        push    rcx
-        push    rdx
 
-
-        ; mov     rax, [listSize]         ; DEBUG: load the size of the list into rax
-        ; call    print_int_rax           ; DEBUG: print the size of the list        
+        ; start the loop
         mov     rbx, [startAdress]      ; load the start adress of the list in rax
         xor     rcx, rcx                ; clear rcx (counter = 0)
 
-loop_to_get_right_adress:
+list_add_loop:
 
-        cmp     rcx, [listSize]         ; check if the counter is bigger than the size of the list
-        je      exit_loop_to_get_right_adress
+        ; check if the right adress is reached
+        cmp     rcx, [listSize]         ; check if the counter is equal the size of the list
+        je      list_add_loop_exit      ; if so, the right adress is reached
 
+        ; increment the counter
         add     rbx, 16                 ; add 16 to the current adress
         inc     rcx                     ; increment the counter
-        cmp     rcx, [listSize]         ; check if the counter is equal to the size of the list
-        jne     loop_to_get_right_adress
+        jmp     list_add_loop
 
-exit_loop_to_get_right_adress:
+list_add_loop_exit:
         
-        mov     rax, rbx                ; load the current adress in rax
-        ; call    print_int_rax           ; DEBUG: print the current adress
-
+        ; write tv_sec into memory
         mov     rax, [rdi]              ; load the timeval.tv_sec into rax
-        ; call    print_int_rax           ; DEBUG: print timeval.tv_sec
         mov     [rbx], rax              ; load the timeval.tv_sec into memory at the right adress (startAdress + 16*listSize)
         
+        ; write tv_usec into memory
         mov     rax, [rdi+8]            ; load the timeval.tv_usec into rax
-        ; call    print_int_rax           ; DEBUG: print timeval.tv_usec
         mov     [rbx + 8], rax          ; load the timeval.tv_usec into memory at the right adress (startAdress + 16*listSize + 8)
-        
-        ; mov     rax, [startAdress]      ; DEBUG: load the first adress of the list into rax
-        ; mov     rax, [rax]              ; DEBUG: load the first value of the list into rax
-        ; call    print_int_rax           ; DEBUG: print the first value of the list
 
+        ; increase the size of the list
         mov     rax, [listSize]         ; load the size of the list into rax
-        ; call    print_int_rax           ; DEBUG: print the new size of the list
         inc     rax                     ; increase the size of the list by 1
         mov     [listSize], rax         ; save the new size of the list in listSize
+        
+        ; return the new position of the element
         dec     rax                     ; decrease the size of the list by 1 to get current position
-        push    rax                     ; return the current position of the list
 
-        pop     rdx
-        pop     rcx
-        pop     rbx
+        pop     rbx 
 
         mov     rsp, rbp
         pop     rbp
+        ret
 
 
 
 ;-----------------------------------------------------------------------------
 ; extern short list_find(struct timeval *tv);
 ;-----------------------------------------------------------------------------
-        global list_find:function          ; NOTE: to check if registers should be saved in stack; rest is working and tested
+        global list_find:function
 list_find:
 
         push    rbp
         mov     rbp,rsp
 
+        push    rbx
+
         ; load the values of the timeval into r8 and r9
         mov     r8, [rdi]                   ; load the struct timeval.tv_sec into r8
         mov     r9, [rdi+8]                 ; load the struct timeval.tv_usec into r9
 
+        ; start the loop
         mov     rbx, [startAdress]          ; load the start adress of the list into rbx
         xor     rcx, rcx                    ; clear rcx (counter = 0)
 
@@ -271,6 +260,8 @@ list_find_not_found:
         mov     rax, -1                     ; return -1 to indicate that the searched timeval was not found
         push    rax                         ; return the return value
 
+        pop     rbx
+
         mov     rsp,rbp
         pop     rbp
         ret
@@ -279,7 +270,8 @@ list_find_match:
 
         ; if the element was found inside the loop, return the current counter (position of the element)
         mov     rax, rcx                    ; return the current counter (position of the found element)
-        push    rax                         ; return the return value
+
+        pop     rbx
 
         mov     rsp,rbp
         pop     rbp
@@ -289,11 +281,13 @@ list_find_match:
 ;-----------------------------------------------------------------------------
 ; extern bool list_get(struct timeval *tv, short idx);
 ;-----------------------------------------------------------------------------
-        global list_get:function           ; NOTE: to check if registers should be saved in stack; rest is working and tested
+        global list_get:function
 list_get:
 
         push    rbp
         mov     rbp,rsp
+
+        push    rbx
 
         ; check if the list size is 0
         mov     rax, [listSize]            ; load the size of the list into rax
@@ -335,7 +329,6 @@ list_get_loop_exit:
         mov     rax, [rbx+8]               ; load the tv_usec of the list element into rax
         mov     [rdi+8], rax               ; save the tv_usec of the list element into the given adress
 
-
 list_get_done:
 
         ; return true
@@ -343,6 +336,7 @@ list_get_done:
         push    rax                        ; return the return value
 
         ; exit the function
+        pop     rbx
         mov     rsp,rbp
         pop     rbp
         ret
@@ -363,6 +357,7 @@ list_get_not_found:
 exit:
         push    rbp
         mov     rbp,rsp
+        push    rbx
 
         mov     rax, sys_write              ; Sys-Call Number (Write)
         mov     rbx, stdout                 ; file discriptor (STD OUT)
@@ -370,6 +365,7 @@ exit:
         mov     rdx, lenErrorMsg            ; length of the Message
         int     80h                         ; call Kernel
 
+        pop     rbx
         mov     rsp,rbp
         pop     rbp
         ret
@@ -377,16 +373,12 @@ exit:
 
 
 print_int_rax:
-
+        ; print the value of rax only debug!!!
         push    rbp
         mov     rbp, rsp
         push    rsi 
-        push    rax
         push    rdi
-        push    r8
-        push    r9
         push    rbx
-        push    rcx
         push    rdx
 
         mov     rdi, formatStrInt       ; first argument: format string
@@ -396,12 +388,8 @@ print_int_rax:
         call    printf
         
         pop     rdx
-        pop     rcx
         pop     rbx
-        pop     r9
-        pop     r8
         pop     rdi
-        pop     rax
         pop     rsi
 
         mov     rsp, rbp

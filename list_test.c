@@ -50,22 +50,13 @@ main(int argc, char *argv[])
     assert(list_is_sorted() == false);
     assert(list_get(&tv_tmp, 0) == false);
     assert(list_get(NULL, 0) == false);
-    assert(list_get(&tv_tmp, -1) == false);
 
-    // NOTE: while loop not terminading maybe fuckt up some registers
     int idx = 0;
-    // while(timestamps[idx].tv_sec != 0) {
-    //     short pos = list_add(&timestamps[idx]);
-    //     assert(pos == idx);
-    //     idx++;
-    // }
-
-    for (idx = 0; idx < 8; idx++) {
+    while(timestamps[idx].tv_sec != 0) {
         short pos = list_add(&timestamps[idx]);
-        printf("pos: %d\n", pos);
         assert(pos == idx);
+        idx++;
     }
-    
     assert(list_size() == idx);
     assert(list_is_sorted() == true);
 
