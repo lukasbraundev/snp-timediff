@@ -20,6 +20,7 @@ int main(void) {
   // get the input from stdin
   int bufferSize = 10000 // max number of timestamps
                    * 64  // max bit size of timestamp
+                   * 2   // 2 values per timestamp
                    / 8;  // bits -> bytes
 
   char buffer[bufferSize];

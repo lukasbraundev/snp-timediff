@@ -16,8 +16,8 @@ CC          = gcc
 LD          = ld
 NASM        = nasm
 NASMOPT64   = -g -f elf64 -F dwarf
-LDOPT64     =
-CFLAGS      = -Wall -g -std=gnu11 -O2 -fno-inline-small-functions -static
+LDOPT64     = -lc -dynamic-linker /lib64/ld-linux-x86-64.so.2
+CFLAGS      = -Wall -g -std=gnu11 -O2 -static
 INCDIR      = ./
 
 TARGETS     = timediff list_test
