@@ -46,10 +46,24 @@ timeval_to_daystring:
         mov [daystringBase], rdi		; save pointer to daystring
         mov [tvBase], rsi                       ; save pointer to timeval struct
 
-        mov rax, [tvBase]                       ; get pointer to timeval struct
-        mov rax, [rax]                          ; get tv_sec
+
+.setup_base_output:
+        mov rdi, [daystringBase]		; get pointer to daystring
+        ; set the base construction of the output string
+        mov BYTE [rdi + 15], ' '
+        mov BYTE [rdi + 16], 'd'
+        mov BYTE [rdi + 17], 'a'
+        mov BYTE [rdi + 18], 'y'
+        mov BYTE [rdi + 19], 's'
+        mov BYTE [rdi + 20], ','
+        mov BYTE [rdi + 21], ' '
+        mov BYTE [rdi + 24], ':'
+        mov BYTE [rdi + 27], ':'
+        mov BYTE [rdi + 30], '.'
 
 .evaluate_all_elements:
+        mov rax, [tvBase]                       ; get pointer to timeval struct
+        mov rax, [rax]                          ; get tv_sec
         mov rbx, 60                             ; set divisor to 60
         xor rdx, rdx                            ; reset rdx for division
         div rbx                                 ; divide seconds by 60
@@ -70,6 +84,7 @@ timeval_to_daystring:
         mov rsi, 0                              ; write nothing to daystring
         mov dx, 22                              ; clear first 22 chars of daystring (output for days)
         mov cl, 0                               ; replace with 0 -> not displayed
+        mov r8, 0                               ; set printZero flag to false
         call uint_to_ASCII
         jmp .write_hours                        ; continue with writing hours
 
@@ -84,6 +99,7 @@ timeval_to_daystring:
         mov rsi, [days]                         ; set number to days
         mov dx, 15                              ; set length of day string
         mov cl, BYTE 0                          ; set fill character to 0 -> not displayed 
+        mov r8, 0                               ; set printZero flag to false
         call uint_to_ASCII
 
 .write_hours:
@@ -92,6 +108,7 @@ timeval_to_daystring:
         movzx rsi, BYTE [hours]                 ; set number to hours
         mov dx, 2                               ; set length of hour string
         mov cl, BYTE '0'                        ; set fill character to '0' 
+        mov r8, 0                               ; set printZero flag to false
         call uint_to_ASCII
 
 .write_minutes:
@@ -100,6 +117,7 @@ timeval_to_daystring:
         movzx rsi, BYTE [minutes]               ; set number to minutes
         mov dx, 2                               ; set length of minute string
         mov cl, BYTE '0'                        ; set fill character to '0' 
+        mov r8, 0                               ; set printZero flag to false
         call uint_to_ASCII
 
 .write_seconds:
@@ -108,6 +126,7 @@ timeval_to_daystring:
         movzx rsi, BYTE [seconds]               ; set number to seconds
         mov dx, 2                               ; set length of second string
         mov cl, BYTE '0'                        ; set fill character to '0' 
+        mov r8, 0                               ; set printZero flag to false
         call uint_to_ASCII
 
 .write_microseconds:
@@ -117,6 +136,7 @@ timeval_to_daystring:
         mov rsi, [rsi + 8]                      ; set number to tv_usec of timeval struct
         mov dx, 6                               ; set length of microsecond string
         mov cl, BYTE '0'                        ; set fill character to '0' 
+        mov r8, 0                               ; set printZero flag to false
         call uint_to_ASCII
 
 .end_function:

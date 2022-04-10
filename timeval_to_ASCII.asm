@@ -47,6 +47,7 @@ timeval_to_ASCII:
         mov rsi, [rsi]                          ; set number to tv_sec
         mov dx, 20                              ; set length of seconds to 20
         mov cl, 0                               ; set fill character to 0 -> not displayed
+        mov r8, 1                               ; set printZero flag to true
         call uint_to_ASCII
 
 .write_dot:
@@ -59,6 +60,7 @@ timeval_to_ASCII:
         mov rsi, [rsi + 8]                      ; set number to tv_usec
         mov dx, 6                               ; set length of microseconds to 6
         mov cl, '0'                             ; set fill character to '0'
+        mov r8, 0                               ; set printZero flag to false
         call uint_to_ASCII
 
 .end_function:

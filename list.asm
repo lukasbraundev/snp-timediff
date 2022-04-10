@@ -46,6 +46,7 @@ list_size:
         mov     rbp,rsp
 
         ; your code goes here
+        mov ax, 3       ; TODO: only for test purpose, delete later
 
         mov     rsp,rbp
         pop     rbp
@@ -106,6 +107,7 @@ list_get:
         mov     rbp,rsp
 
         ; your code goes here
+        mov rax, 1       ; TODO: only for test purpose, delete later
 
         mov     rsp,rbp
         pop     rbp
