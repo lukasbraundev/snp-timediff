@@ -48,7 +48,7 @@ timeval:
         tv_usec dq 0
 
 ; Example: implementation of the function ASCII_to_timeval and timeval_to_ASCII
-        timestamp db '12345678901234567890.123456'
+        timestamp db '8640.0'
         lenTimestamp equ $-timestamp
         time_char db 'abcdfghijklmnopqrstupabcdef', 10
         lenTimeChar equ $-time_char
@@ -101,15 +101,24 @@ SECTION .text
 
 _start:                                 ; Programm Start
 
+        ; call void list_init(void)
+        call list_init
+
+        mov rdi, timeval
+        call list_add
+
 ; Example: implementation of the function ASCII_to_timeval and timeval_to_ASCII
         ; ; bool ASCII_to_timeval(struct timeval *tv, char *ascii_time, short len)
-        ; mov rdi, timeval
-        ; mov rsi, timestamp
-        ; xor rdx, rdx
-        ; mov dx, lenTimestamp
-        ; call ASCII_to_timeval
-        ; ; rax now holds 1 if successful, 0 if not
+        mov rdi, timeval
+        mov rsi, timestamp
+        xor rdx, rdx
+        mov dx, lenTimestamp
+        call ASCII_to_timeval
+        ; rax now holds 1 if successful, 0 if not
 
+        mov rdi, timeval
+        call list_add
+        
         ; ; void timeval_to_ASCII(char *ascii_time, struct timeval *tv)
         ; mov rdi, time_char
         ; mov rsi, timeval
@@ -186,7 +195,7 @@ finishedInput:
 
         ; call bool list_is_sorted(void)
         call list_is_sorted                     ; check if the list is sorted
-        cmp ax, 0                               ; check if false
+        cmp rax, 0                              ; check if false
         je .exit                                ; TODO: exit because list not sorted
 
         ; min. 1 timestamp in list and list is sorted
@@ -230,7 +239,7 @@ finishedInput:
         ; add first timestamp to output
         ; call bool list_get(struct timeval *tv, short idx)
         mov rdi, timevalOne                     ; set tv to timevalOne
-        mov rsi, [nextTimestamp]                ; set idx to 0 -> get first element
+        movzx rsi, WORD [nextTimestamp]         ; set idx to 0 -> get first element
         
         call list_get                           ; get the first timestamp
         
@@ -281,7 +290,7 @@ finishedInput:
         ; add next timestamp to output
         ; call bool list_get(struct timeval *tv, short idx)
         mov rdi, timevalTwo                     ; set tv to timevalTwo
-        mov rsi, [nextTimestamp]                ; set idx to the next timestamp index
+        movzx rsi, WORD [nextTimestamp]         ; set idx to the next timestamp index
         
         call list_get                           ; get the next timestamp
 
