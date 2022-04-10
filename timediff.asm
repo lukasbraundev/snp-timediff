@@ -178,12 +178,18 @@ finishedInput:
         ;-----------------------------------------------------------
 
 .start_output:
+        ; call short list_size(void)
         call list_size                          ; get the amount of timestamps in the list
         mov [amountOfTimestamps], ax            ; store the amount of timestamps in the list
         cmp WORD [amountOfTimestamps], 0        ; check if the list is empty
         je .exit                                ; TODO: exit because no input
 
-        ; min. 1 timestamp in list
+        ; call bool list_is_sorted(void)
+        call list_is_sorted                     ; check if the list is sorted
+        cmp ax, 0                               ; check if false
+        je .exit                                ; TODO: exit because list not sorted
+
+        ; min. 1 timestamp in list and list is sorted
 .calculate_required_memory:
         ; first line: 28 BYTEs
         ; following lines: 8 (separator) + 28 (timestamp) + 38 (timediff) = 74 BYTEs
