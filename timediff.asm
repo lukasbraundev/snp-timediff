@@ -386,10 +386,13 @@ _start:                                 ; Programm Start
         ; calculate difference
         mov rax, [timevalTwo + 8]               ; set rax to tv_usecTwo
         sub rax, [timevalOne + 8]               ; subtract tv_usecOne from tv_usecTwo
+        jnc .positive_value                     ; jump if rax is positive
+        add rax, 1000000                        ; negative rax -> add 1000000 to get positive value (does create CF too so sbb will work fine later on)
+.positive_value:
         mov [timevalDiff + 8], rax              ; store the difference in tv_usecDiff
 
-        mov rax, [timevalOne]                   ; set rax to tv_secOne
-        sbb rax, [timevalTwo]                   ; subtract tv_secTwo from tv_secOne (with carry)
+        mov rax, [timevalTwo]                   ; set rax to tv_secOne
+        sbb rax, [timevalOne]                   ; subtract tv_secTwo from tv_secOne (with carry)
         mov [timevalDiff], rax                  ; store the difference in tv_secDiff
 
         ; difference is now in timevalDiff

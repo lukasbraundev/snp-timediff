@@ -70,8 +70,10 @@ ASCII_to_timeval:
 	cmp cl, [dotIndex]			; check with length of characters before '.'
 	je .eval_sec_done			; if counter == number of charackters before '.', jump to .eval_sec_done
 	mul rbx					; multiply seconds by 10
-	add al, BYTE [rsi + rcx]		; add next digit ASCII to rax
-	sub al, 48				; subtract ASCII '0' from rax
+        xor r9, r9                              ; clear r9
+        mov r9b, BYTE [rsi + rcx]		; load next ascci digit into r9b
+        add rax, r9				; add r9 to rax (64bit addition)
+	sub rax, 48				; subtract ASCII '0' from rax
 	inc rcx					; increment counter
 	jmp .start_eval_sec			; jump to .start_eval_sec
 
@@ -101,9 +103,11 @@ ASCII_to_timeval:
 	je .eval_usec_done			; if counter == 6, jump to .eval_usec_done
 	mul rbx					; multiply microseconds by 10
 	cmp cl, r8b				; check if counter is smaller than length of microseconds
-	jnb .string_usec_end
-	add al, BYTE [rsi + rcx]		; add next digit ASCII to rax
-	sub al, 48				; subtract ASCII '0' from rax
+	jnb .string_usec_end                    ; if not, jump to .string_usec_end
+        xor r9, r9                              ; clear r9
+        mov r9b, BYTE [rsi + rcx]		; load next ascci digit into r9b
+        add rax, r9       			; add r9 to rax (64bit addition)
+	sub rax, 48				; subtract ASCII '0' from rax
 .string_usec_end:
 	inc rcx					; increment counter
 	jmp .start_eval_usec			; jump to .start_eval_usec
@@ -111,7 +115,7 @@ ASCII_to_timeval:
 .eval_usec_done:
 	; move rax to tv_usec
 	mov rdi, [tvBase]			; load pointer to timeval into rdi
-	mov [rdi + 8], rax			; store seconds in tv_usec
+	mov [rdi + 8], rax			; store microseconds in tv_usec
 
 	mov eax, 1				; set return value to true
 
