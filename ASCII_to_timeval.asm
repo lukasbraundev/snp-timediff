@@ -9,7 +9,7 @@
 ; Architecture:  x86-64
 ; Language:      NASM Assembly Language
 ;
-; Authors:       Johannes Brandenburger, Lukas Braun, Henry Schuler
+; Authors:       Henry Schuler
 ;
 ;----------------------------------------------------------------------------
 
@@ -17,13 +17,10 @@
 ; SECTION DATA
 ;-----------------------------------------------------------------------------
 SECTION .data
-	value db 0
+        tvBase dq 0
 	ascii_timeBase dq 0
-	ascii_timeLen db 0
+	ascii_timeLen dw 0
 	dotIndex db 0
-	lenBeforeDot db 0
-        userMsg db 'Please enter a timestamp (to end write "F"): ' ;Message to ask the User to Enter a new timestamp
-        lenUserMsg equ $-userMsg                ;The length of the message
 
 ;-----------------------------------------------------------------------------
 ; SECTION TEXT
@@ -33,28 +30,24 @@ SECTION .text
 
 ;-----------------------------------------------------------------------------
 ; extern bool ASCII_to_timeval(struct timeval *tv, char *ascii_time, short len);
+; returns: 1 if success, 0 if error
 ;-----------------------------------------------------------------------------
         global ASCII_to_timeval:function
 ASCII_to_timeval:
         push rbp				; save stack base of caller
         mov rbp, rsp				; set stack pointer to stack base of callee
         push rbx				; save callee-saved register
-        push rsi 				; save callee-saved register
-        push rdi				; save callee-saved register
-        
-	mov rax, [rbp + 24]			; load pointer to ascii_time into rdx
-	mov [ascii_timeBase], rax		; store pointer to ascii_time in ascii_timeBase
 
-	mov al, [rbp + 26]			; load len into rdx
-	mov [ascii_timeLen], al			; store len in ascii_timeLen
-
+        mov [tvBase], rdi                           ; store pointer to struct timeval in tvBase
+	mov [ascii_timeBase], rsi		; store pointer to ascii_time in ascii_timeBase
+	mov [ascii_timeLen], dx			; store len in ascii_timeLen
 
 	; search ASCII '.' = 46 in ascii_time
-	mov rax, [rbp + 24]			; load ascii_timeBase into rax
+	mov rax, [ascii_timeBase]		; load ascii_timeBase into rax
 	xor rcx, rcx				; set counter to 0
 
 .start_search:
-	cmp cl, [ascii_timeLen]			; compare counter with length of ascii_time (= len)
+	cmp cl, BYTE [ascii_timeLen]			; compare counter with length of ascii_time (= len)
 	je .not_found				; if character 21 has been read without finding '.', exit loop -> error
 	cmp BYTE [rax + rcx], 46		; compare ascii_time[rcx] with ASCII '.'
 	je .found_dot				; if found, jump to .found_dot
@@ -84,7 +77,7 @@ ASCII_to_timeval:
 
 .eval_sec_done:
 	; move rax to tv_sec
-	mov rdi, [rbp + 16]			; load pointer to timeval into rdi
+	mov rdi, [tvBase]			; load pointer to timeval into rdi
 	mov [rdi], rax				; store seconds in tv_sec
 
 	; evaluate tv_usec from ascii_time
@@ -99,8 +92,9 @@ ASCII_to_timeval:
 
 	mov rbx, 10				; set multiply value to 10
 
-	mov r8b, [ascii_timeLen]
+	mov r8b, BYTE [ascii_timeLen]
 	sub r8b, [dotIndex]			; save length of millisecond characters in r8
+        dec r8b                                 ; subtract 1 because of the dot
 
 .start_eval_usec:
 	cmp cl, 6				; 6 positions for microseconds
@@ -116,18 +110,8 @@ ASCII_to_timeval:
 
 .eval_usec_done:
 	; move rax to tv_usec
-	mov rdi, [rbp + 16]			; load pointer to timeval into rdi
+	mov rdi, [tvBase]			; load pointer to timeval into rdi
 	mov [rdi + 8], rax			; store seconds in tv_usec
-
-	; mov al, BYTE [rdi + 8]
-	; mov [value], al
-	; mov rax, 4              ; Sys-Call Number (Write)
-        ; mov rbx, 1                 ; file discriptor (STD OUT)
-	; ; mov rcx, [ascii_timeBase]
-	; ; add cl, [dotIndex]
-	; mov rcx, value
-        ; mov rdx, 1             ; length of the Message
-        ; int 80h                         ; call Kernel
 
 	mov eax, 1				; set return value to true
 
@@ -137,8 +121,6 @@ ASCII_to_timeval:
 	mov eax, 0				; set return value to false
 
 .end_function:
-        pop rdi					; restore callee-saved register
-        pop rsi					; restore callee-saved register
         pop rbx					; restore callee-saved register
         mov rsp, rbp				; restore stack pointer of caller
         pop rbp					; restore stack base of caller
