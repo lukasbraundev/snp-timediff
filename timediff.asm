@@ -182,6 +182,7 @@ loop_reinit_placeholder:                ; mov ' ' on each index of possible_time
         inc rsi                         ; inc buffer index for next char
         jmp next_char                   ; start reading the next timestamp
 finishedInput:
+        ; Ausführung der weiteren methoden / berechnung der differenz usw.
         nop
 
 ;         ;-----------------------------------------------------------
