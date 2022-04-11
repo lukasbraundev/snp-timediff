@@ -171,12 +171,12 @@ timestamp_finished:
         ; placeholder reinitialize
         cmp  byte [lasttimestamp], 1
         je finishedInput
-        mov r13, 0
+        mov r12, 0
 loop_reinit_placeholder:                ; mov ' ' on each index of possible_timechar
         mov dl, byte 32
-        mov [possible_timechar + r13], dl      ;mov ' ' 
-        inc r13
-        cmp r13, 27
+        mov [possible_timechar + r12], dl      ;mov ' ' 
+        inc r12
+        cmp r12, 27
         jne loop_reinit_placeholder
         mov r12, 0                      ; reset indexctr for possible_timestamp
         inc rsi                         ; inc buffer index for next char
