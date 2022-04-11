@@ -16,10 +16,16 @@
 %include "syscall.inc"
 
 SECTION .data
-        inpuError db 'Input Error - falsche Eingabe'
+        inpuError db 'Input Error - falsche Eingabe', 10
         inputError_len equ $-inpuError
 
+inputErrorIdx equ 0
 
+;----------------------------------------------------------------------------
+sys_read equ 3
+sys_write equ 4
+stdout equ 1
+stdin equ 2
 ;-----------------------------------------------------------------------------
 ; SECTION TEXT
 ;-----------------------------------------------------------------------------
@@ -31,5 +37,22 @@ SECTION .text
 ;-----------------------------------------------------------------------------
         global displayError:function
 displayError:
-        nop             ;TODO
+        push rbp				; save stack base of caller
+        mov rbp, rsp				; set stack pointer to stack base of callee
+        push rdi				; save callee-saved register (index of Error Message is in rdi)
+        cmp rdi, inputErrorIdx
+        je .displayInputError
+
+.displayInputError:
+        mov eax, sys_write                      ; Sys-Call Number (Write)
+        mov ebx, stdout                         ; file discriptor (STD OUT)
+        mov ecx, inpuError                      ; Message to write
+        mov edx, inputError_len                 ; length of the Message
+        int 80h                                 ; call Kernel
+        jmp .end_function                       ; end function
+
+.end_function:
+        pop rdi					; restore callee-saved register
+        mov rsp, rbp				; restore stack pointer of caller
+        pop rbp					; restore stack base of caller
         ret

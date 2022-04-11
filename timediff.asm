@@ -1,5 +1,5 @@
 ;-----------------------------------------------------------------------------
-; timediff.asm - 
+; timediff.asm - cat test.txt | ./timediff
 ;-----------------------------------------------------------------------------
 ;
 ; DHBW Ravensburg - Campus Friedrichshafen
@@ -34,7 +34,9 @@ extern list_get
 sys_read equ 3
 sys_write equ 4
 stdout equ 1
-stdin equ 2
+stdin equ 0
+
+BUFFER_SIZE equ 80
 
 ;-----------------------------------------------------------------------------
 ; SECTION DATA
@@ -42,6 +44,8 @@ stdin equ 2
 SECTION .data
         userMsg db 'Please enter a timestamp (to end write "F"): ' ;Message to ask the User to Enter a new timestamp
         lenUserMsg equ $-userMsg                ;The length of the message
+lasttimestamp:  db 1   ;boolean if its last timestamp to void reinits
+
 
 timeval:
         tv_sec  dq 0
@@ -58,6 +62,9 @@ timeval:
         daystring db 'DDDDDDDDDDDDDDD days, HH:MM:SS.UUUUUU', 10
         lenDaystring equ $-daystring
 ; Example: END
+
+        possible_timechar db '                            '
+        possible_timechar_len equ $-possible_timechar
 
         ;-----------------------------------------------------------
         ; ALLOCATE MEMORY FOR OUTPUT
@@ -88,6 +95,9 @@ timevalDiff:
 ;-----------------------------------------------------------------------------
 SECTION .bss
         timestamp_input resb 128
+                align 128               ; make sure that buffer adress is a multiple of 128
+        buffer  resb BUFFER_SIZE        ; buffersize for input
+                resb 128                ; zero after buffer so that buffer end can be determined
 
 ;-----------------------------------------------------------------------------
 ; SECTION TEXT
@@ -100,6 +110,11 @@ SECTION .text
         global _start:function          ; make label available to linker
 
 _start:                                 ; Programm Start
+; call error handler function
+        ;push WORD 0                    ; push idx of error Msg
+        ;call displayError              ; function call
+        ;add rsp, 2
+
 
         ; call void list_init(void)
         call list_init
@@ -148,37 +163,85 @@ _start:                                 ; Programm Start
 
 ; Example: END
 
-readNextTimestamp:
+init:
+        mov r12, 0                      ; ctr for the possible timechar index
+
+read_next_string:
+        ; Read from STD in
+        mov byte [lasttimestamp], 1     ; init the bool
+        mov rax, sys_read               ; Sys-Call Number (Read)
+        mov rbx, stdin                  ; file discriptor (STD IN)
+        mov rcx, buffer                 ; input is stored into timestamp_input
+        mov rdx, BUFFER_SIZE            ; size of Input
+        int 80h                         ; call Kernel
+        test    rax,rax                 ; check system call return value
+        jz      timestamp_finished      ; jump to exit if nothing is read (end)
+        mov byte [lasttimestamp], 0     ; timstamp is not ended
+        lea rsi, [buffer]               ; loads adress of first char into rsi
+        mov byte [buffer+rax], 128      ; determines the End of the Buffer
+
+next_char:      
+        mov     dl, byte [rsi]          ; load next char from buffer
+        cmp     dl,127                  ; check if its a char
+        ja      read_next_string        ; jump if no char
+        cmp     r12, 27                 ; check if input length is max
+        je      max_input_error
+        cmp     dl, 10                  ; check for linefeed TODO, check for end of file
+        je      timestamp_finished      ; jump if timestamp detected
+        mov     [possible_timechar + r12], dl
+        inc r12                         ; inc possible timechar index
+        inc rsi                         ; inc adress in Buffer
+        jmp next_char
+
+max_input_error:
+        push WORD 0                    ; push idx of error Msg
+        call displayError              ; function call
+        add rsp, 2
+        jmp exit
+
+timestamp_finished:
+        ; print placeholder for testing purpose
+        ; mov rax, sys_write               ; Sys-Call Number (Read)
+        ; mov rbx, stdout                  ; file discriptor (STD IN)
+        ; mov rcx, possible_timechar                 ; input is stored into timestamp_input
+        ; mov rdx, possible_timechar_len            ; size of Input
+        ; int 80h      
+
+        ;________________________________________
+
+        ; Check for correct syntax
+        ; push rsi                        ; save register to stack
+        ; push rdx                        ; save register to stack
+        ; mov rdi, timeval
+        ; mov rsi, possible_timechar
+        ; xor rdx, rdx
+        ; mov dx, possible_timechar_len
+        ; call ASCII_to_timeval
+        ; pop rdx                         ; get register back from stack
+        ; pop rsi                         ; get register back from stack
+        ; cmp rax, 0                      ; check if conversation was sucessful
+        ; je exit                         ; if not exit programnm
         
-        ; Write the initial User Message
-        mov eax, sys_write              ; Sys-Call Number (Write)
-        mov ebx, stdout                 ; file discriptor (STD OUT)
-        mov ecx, userMsg                ; Message to write
-        mov edx, lenUserMsg             ; length of the Message
-        int 80h                         ; call Kernel
-
-        ;Read and store the user input
-        mov eax, sys_read               ; Sys-Call Number (Read)
-        mov ebx, stdin                  ; file discriptor (STD IN)
-        mov ecx, timestamp_input        ; input is stored into timestamp_input
-        mov edx, 128                    ; size of Input
-        int 80h                         ; call Kernel
-
-        ;Compare if timestamp is F
-        lea     rsi, [timestamp_input]  ; load the address of buffer to rsi
-        movzx   rdx, byte [rsi]         ; load first char to
-        cmp     rdx, 70                 ; check if first char is "F"
-        je      finishedInput           ; if its F input is finished
-        ;TODO --> Add to list
-        jne     readNextTimestamp       ; not F input not finished
-
+        ; ----- TODO Error Message -------- ;
+        ; mov rdi, timeval
+        ; call list_add
+        ; addList() Funktion aufrufen TODO Rückgabewert überprüfen
+        ; placeholder reinitialize
+        cmp  byte [lasttimestamp], 1
+        je finishedInput
+        mov r12, 0
+loop_reinit_placeholder:                ; mov ' ' on each index of possible_timechar
+        mov dl, byte 32
+        mov [possible_timechar + r12], dl      ;mov ' ' 
+        inc r12
+        cmp r12, 27
+        jne loop_reinit_placeholder
+        mov r12, 0                      ; reset indexctr for possible_timestamp
+        inc rsi                         ; inc buffer index for next char
+        jmp next_char                   ; start reading the next timestamp
 finishedInput:
-        ;Test Purpose to test the Jump
-        mov eax, sys_write              ; Sys-Call Number (Write)
-        mov ebx, stdout                 ; file discriptor (STD OUT)
-        mov ecx, userMsg                ; Message to write
-        mov edx, lenUserMsg             ; length of the Message
-        int 80h                         ; call Kernel
+        ; Ausführung der weiteren methoden / berechnung der differenz usw.
+        nop
 
 
         ;-----------------------------------------------------------
