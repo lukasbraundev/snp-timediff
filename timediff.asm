@@ -119,20 +119,20 @@ _start:                                 ; Programm Start
         ; call void list_init(void)
         call list_init
 
-        mov rdi, timeval
-        call list_add
+        ; mov rdi, timeval
+        ; call list_add
 
 ; Example: implementation of the function ASCII_to_timeval and timeval_to_ASCII
         ; ; bool ASCII_to_timeval(struct timeval *tv, char *ascii_time, short len)
-        mov rdi, timeval
-        mov rsi, timestamp
-        xor rdx, rdx
-        mov dx, lenTimestamp
-        call ASCII_to_timeval
-        ; rax now holds 1 if successful, 0 if not
+        ; mov rdi, timeval
+        ; mov rsi, timestamp
+        ; xor rdx, rdx
+        ; mov dx, lenTimestamp
+        ; call ASCII_to_timeval
+        ; ; rax now holds 1 if successful, 0 if not
 
-        mov rdi, timeval
-        call list_add
+        ; mov rdi, timeval
+        ; call list_add
         
         ; ; void timeval_to_ASCII(char *ascii_time, struct timeval *tv)
         ; mov rdi, time_char
@@ -163,10 +163,10 @@ _start:                                 ; Programm Start
 
 ; Example: END
 
-init:
+.init:
         mov r12, 0                      ; ctr for the possible timechar index
 
-read_next_string:
+.read_next_string:
         ; Read from STD in
         mov byte [lasttimestamp], 1     ; init the bool
         mov rax, sys_read               ; Sys-Call Number (Read)
@@ -175,71 +175,77 @@ read_next_string:
         mov rdx, BUFFER_SIZE            ; size of Input
         int 80h                         ; call Kernel
         test    rax,rax                 ; check system call return value
-        jz      timestamp_finished      ; jump to exit if nothing is read (end)
+        jz      .timestamp_finished      ; jump to exit if nothing is read (end)
         mov byte [lasttimestamp], 0     ; timstamp is not ended
         lea rsi, [buffer]               ; loads adress of first char into rsi
         mov byte [buffer+rax], 128      ; determines the End of the Buffer
 
-next_char:      
+.next_char:      
         mov     dl, byte [rsi]          ; load next char from buffer
         cmp     dl,127                  ; check if its a char
-        ja      read_next_string        ; jump if no char
+        ja      .read_next_string        ; jump if no char
         cmp     r12, 27                 ; check if input length is max
-        je      max_input_error
+        je      .max_input_error
         cmp     dl, 10                  ; check for linefeed TODO, check for end of file
-        je      timestamp_finished      ; jump if timestamp detected
+        je      .timestamp_finished      ; jump if timestamp detected
         mov     [possible_timechar + r12], dl
         inc r12                         ; inc possible timechar index
         inc rsi                         ; inc adress in Buffer
-        jmp next_char
+        jmp .next_char
 
-max_input_error:
+.max_input_error:
         push WORD 0                    ; push idx of error Msg
         call displayError              ; function call
         add rsp, 2
-        jmp exit
+        jmp .exit
 
-timestamp_finished:
+.timestamp_finished:
         ; print placeholder for testing purpose
         ; mov rax, sys_write               ; Sys-Call Number (Read)
         ; mov rbx, stdout                  ; file discriptor (STD IN)
         ; mov rcx, possible_timechar                 ; input is stored into timestamp_input
-        ; mov rdx, possible_timechar_len            ; size of Input
+        ; mov rdx, r12            ; size of Input
         ; int 80h      
 
         ;________________________________________
 
         ; Check for correct syntax
-        ; push rsi                        ; save register to stack
-        ; push rdx                        ; save register to stack
-        ; mov rdi, timeval
-        ; mov rsi, possible_timechar
-        ; xor rdx, rdx
-        ; mov dx, possible_timechar_len
-        ; call ASCII_to_timeval
-        ; pop rdx                         ; get register back from stack
-        ; pop rsi                         ; get register back from stack
-        ; cmp rax, 0                      ; check if conversation was sucessful
-        ; je exit                         ; if not exit programnm
+        ; call bool ASCII_to_timeval(struct timeval *tv, char *ascii_time, short len)
+        push rsi                        ; save register to stack
+        push rdx                        ; save register to stack
+        mov rdi, timeval
+        mov rsi, possible_timechar
+        xor rdx, rdx
+        mov dx, r12w
+        call ASCII_to_timeval
+        pop rdx                         ; get register back from stack
+        pop rsi                         ; get register back from stack
+        cmp rax, 0                      ; check if conversation was false
+        je .exit                        ; if so, exit programnm
+        ; ----- TODO: Error Message -------- ;
         
-        ; ----- TODO Error Message -------- ;
-        ; mov rdi, timeval
-        ; call list_add
+        ; call short list_add(struct timeval *tv)
+        push rsi
+        push rdx
+        mov rdi, timeval
+        call list_add
+        pop rdx
+        pop rsi
         ; addList() Funktion aufrufen TODO Rückgabewert überprüfen
         ; placeholder reinitialize
         cmp  byte [lasttimestamp], 1
-        je finishedInput
+        je .finishedInput
         mov r12, 0
-loop_reinit_placeholder:                ; mov ' ' on each index of possible_timechar
+.loop_reinit_placeholder:                ; mov ' ' on each index of possible_timechar
         mov dl, byte 32
         mov [possible_timechar + r12], dl      ;mov ' ' 
         inc r12
         cmp r12, 27
-        jne loop_reinit_placeholder
+        jne .loop_reinit_placeholder
         mov r12, 0                      ; reset indexctr for possible_timestamp
         inc rsi                         ; inc buffer index for next char
-        jmp next_char                   ; start reading the next timestamp
-finishedInput:
+        jmp .next_char                   ; start reading the next timestamp
+.finishedInput:
         ; Ausführung der weiteren methoden / berechnung der differenz usw.
         nop
 
