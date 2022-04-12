@@ -197,7 +197,7 @@ _start:                                 ; Programm Start
 
 .timestamp_finished:
         inc r15
-        cmp r15, 100001
+        cmp r15, 10001
         je .error_max_timestamp
         ; print placeholder for testing purpose
         ; mov rax, sys_write               ; Sys-Call Number (Read)
