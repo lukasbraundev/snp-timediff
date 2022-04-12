@@ -42,8 +42,8 @@ BUFFER_SIZE equ 80
 ; SECTION DATA
 ;-----------------------------------------------------------------------------
 SECTION .data
-        userMsg db 'Please enter a timestamp (to end write "F"): ' ;Message to ask the User to Enter a new timestamp
-        lenUserMsg equ $-userMsg                ;The length of the message
+        userMsg db 'Please enter a timestamp (to end write "F"): '      ;Message to ask the User to Enter a new timestamp
+        lenUserMsg equ $-userMsg                                        ;The length of the message
 
 
 timeval:
@@ -166,31 +166,31 @@ _start:                                 ; Programm Start
         ; Author: Lukas Braun
         ;------------------------------------------------------
 .init:
-        mov r12, 0                      ; ctr for the possible timechar index
+        mov r12, 0                              ; ctr for the possible timechar index
 
 .read_next_string:
         ; Read from STD in
-        mov rax, sys_read               ; Sys-Call Number (Read)
-        mov rbx, stdin                  ; file discriptor (STD IN)
-        mov rcx, buffer                 ; input is stored into timestamp_input
-        mov rdx, BUFFER_SIZE            ; size of Input
-        int 80h                         ; call Kernel
-        test    rax,rax                 ; check system call return value
-        jz      .finshed_input          ; jump to exit if nothing is read (end)
-        lea rsi, [buffer]               ; loads adress of first char into rsi
-        mov byte [buffer+rax], 128      ; determines the End of the Buffer
+        mov rax, sys_read                       ; Sys-Call Number (Read)
+        mov rbx, stdin                          ; file discriptor (STD IN)
+        mov rcx, buffer                         ; input is stored into timestamp_input
+        mov rdx, BUFFER_SIZE                    ; size of Input
+        int 80h                                 ; call Kernel
+        test    rax,rax                         ; check system call return value
+        jz      .finshed_input                  ; jump to exit if nothing is read (end)
+        lea rsi, [buffer]                       ; loads adress of first char into rsi
+        mov byte [buffer+rax], 128              ; determines the End of the Buffer
 
 .next_char:      
-        mov     dl, byte [rsi]          ; load next char from buffer
-        cmp     dl,127                  ; check if its a char
-        ja      .read_next_string        ; jump if no char
-        cmp     r12, 27                 ; check if input length is max
+        mov     dl, byte [rsi]                  ; load next char from buffer
+        cmp     dl,127                          ; check if its a char
+        ja      .read_next_string               ; jump if no char
+        cmp     r12, 27                         ; check if input length is max
         je      .input_error
-        cmp     dl, 10                  ; check for linefeed
-        je      .timestamp_finished      ; jump if timestamp detected
+        cmp     dl, 10                          ; check for linefeed
+        je      .timestamp_finished             ; jump if timestamp detected
         mov     [possible_timechar + r12], dl
-        inc r12                         ; inc possible timechar index
-        inc rsi                         ; inc adress in Buffer
+        inc r12                                 ; inc possible timechar index
+        inc rsi                                 ; inc adress in Buffer
         jmp .next_char
 
 
@@ -207,17 +207,17 @@ _start:                                 ; Programm Start
 
         ; Check for correct syntax
         ; call bool ASCII_to_timeval(struct timeval *tv, char *ascii_time, short len)
-        push rsi                        ; save register to stack
-        push rdx                        ; save register to stack
+        push rsi                                ; save register to stack
+        push rdx                                ; save register to stack
         mov rdi, timeval
         mov rsi, possible_timechar
         xor rdx, rdx
         mov dx, r12w
         call ASCII_to_timeval
-        pop rdx                         ; get register back from stack
-        pop rsi                         ; get register back from stack
-        cmp rax, 0                      ; check if conversation was false
-        je .input_error                 ; if so, exit programnm
+        pop rdx                                 ; get register back from stack
+        pop rsi                                 ; get register back from stack
+        cmp rax, 0                              ; check if conversation was false
+        je .input_error                         ; if so, exit programnm
         
         ; call short list_add(struct timeval *tv)
         push rsi
@@ -226,18 +226,17 @@ _start:                                 ; Programm Start
         call list_add
         pop rdx
         pop rsi
-        ; addList() Funktion aufrufen TODO Rückgabewert überprüfen
         ; placeholder reinitialize
         mov r12, 0
-.loop_reinit_placholder:                ; mov ' ' on each index of possible_timechar
+.loop_reinit_placholder:                        ; mov ' ' on each index of possible_timechar
         mov dl, byte 32
-        mov [possible_timechar + r12], dl      ;mov ' ' 
+        mov [possible_timechar + r12], dl       ;mov ' ' 
         inc r12
         cmp r12, 27
         jne .loop_reinit_placholder
-        mov r12, 0                      ; reset indexctr for possible_timestamp
-        inc rsi                         ; inc buffer index for next char
-        jmp .next_char                   ; start reading the next timestamp
+        mov r12, 0                              ; reset indexctr for possible_timestamp
+        inc rsi                                 ; inc buffer index for next char
+        jmp .next_char                          ; start reading the next timestamp
 .finshed_input:
         ; Ausführung der weiteren methoden / berechnung der differenz usw.
         nop
