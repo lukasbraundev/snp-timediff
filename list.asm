@@ -103,14 +103,14 @@ list_is_sorted:
         ; immediately return false if the list is empty
         mov     rax, [listSize]       ; load the size of the list into rax
         cmp     rax, 0                ; check if the list is empty
-        je      list_is_sorted_exit_not_sorted       ; if so, return false
+        je      .exit_not_sorted       ; if so, return false
 
         ; begin to check if the list is sorted
         mov     rbx, [startAdress]    ; load the start adress of the list into rax
         mov     rcx, 1                ; set counter to 1
         mov     rdx, 1                ; set return value to true
 
-list_is_sorted_loop: 
+.loop: 
 
         ; load the two tv_sec to compare
         mov     r8, [rbx]             ; load the current tv_sec of the list into r8 
@@ -118,8 +118,8 @@ list_is_sorted_loop:
 
         ; compare the two tv_sec values
         cmp     r9, r8                ; check if the next tv_sec is bigger than the current tv_sec
-        jb      list_is_sorted_exit_not_sorted       ; if not, return false
-        ja      list_is_sorted_already_bigger_tv_sec
+        jb      .exit_not_sorted       ; if not, return false
+        ja      .already_bigger_tv_sec
 
         ; load the two tv_usec to compare
         mov     r8, [rbx+8]           ; load the current tv_usec of the list into r8
@@ -127,23 +127,23 @@ list_is_sorted_loop:
 
         ; compare the two tv_usec values
         cmp     r9, r8                ; check if the next tv_usec is bigger than the current tv_usec
-        jle     list_is_sorted_exit_not_sorted       ; if not, return false
+        jle     .exit_not_sorted       ; if not, return false
 
-list_is_sorted_already_bigger_tv_sec:
+.already_bigger_tv_sec:
 
         ; the tv_usec values are not relevant if the tv_sec values are already not equal
         add     rbx, 16                ; increase the current adress by 16 bytes (size of one tv_sec)
         inc     rcx                    ; increment the counter by 1
         cmp     rcx, [listSize]        ; check if the counter is equal to the size of the list
-        je      list_is_sorted_loop_exit ; if so, the list is gone through -> return true
-        jne     list_is_sorted_loop    ; if not, go to the beginning of the loop
+        je      .loop_exit ; if so, the list is gone through -> return true
+        jne     .loop    ; if not, go to the beginning of the loop
 
-list_is_sorted_exit_not_sorted:
+.exit_not_sorted:
         
         ; return false
         mov     rdx, 0                 ; return false
 
-list_is_sorted_loop_exit:
+.loop_exit:
 
         ; all elements are gone through -> return true
         mov     rax, rdx               ; return the return value
@@ -171,18 +171,18 @@ list_add:
         mov     rbx, [startAdress]      ; load the start adress of the list in rax
         xor     rcx, rcx                ; clear rcx (counter = 0)
 
-list_add_loop:
+.loop:
 
         ; check if the right adress is reached
         cmp     rcx, [listSize]         ; check if the counter is equal the size of the list
-        je      list_add_loop_exit      ; if so, the right adress is reached
+        je      .loop_exit      ; if so, the right adress is reached
 
         ; increment the counter
         add     rbx, 16                 ; add 16 to the current adress
         inc     rcx                     ; increment the counter
-        jmp     list_add_loop
+        jmp     .loop
 
-list_add_loop_exit:
+.loop_exit:
         
         ; write tv_sec into memory
         mov     rax, [rdi]              ; load the timeval.tv_sec into rax
@@ -227,30 +227,30 @@ list_find:
         mov     rbx, [startAdress]          ; load the start adress of the list into rbx
         xor     rcx, rcx                    ; clear rcx (counter = 0)
 
-list_find_loop:
+.loop:
 
         ; check if the counter is equal than the size of the list
         cmp     rcx, [listSize]             ; check if the counter is equal the size of the list
-        je      list_find_not_found         ; if so, the element was not found -> return -1
+        je      .not_found         ; if so, the element was not found -> return -1
 
         ; check if the tv_sec of the current element is equal to the given timeval.tv_sec
         mov     rax, [rbx]                  ; load the current tv_sec of the list into rax
         cmp     rax, r8                     ; check if the current tv_sec is equal to the tv_sec of the searched timeval
-        jne     list_find_skip_check_usec   ; if not equal, go to the next element of the list (skip the check of the tv_usec)
+        jne     .skip_check_usec   ; if not equal, go to the next element of the list (skip the check of the tv_usec)
 
         ; check if the tv_usec of the current element is equal to the given timeval.tv_usec
         mov     rax, [rbx+8]                ; load the current tv_usec of the list into rax
         cmp     rax, r9                     ; check if the current tv_usec is equal to the tv_usec of the searched timeval
-        je      list_find_match             ; if so -> match -> return the current position of the list
+        je      .match             ; if so -> match -> return the current position of the list
 
-list_find_skip_check_usec:
+.skip_check_usec:
 
         ; increment the adress by 16 and increment the counter by 1
         add     rbx, 16                     ; add 16 to the current adress
         inc     rcx                         ; increment the counter
-        jmp     list_find_loop
+        jmp     .loop
 
-list_find_not_found:
+.not_found:
 
         ; if the loop goes through the whole list and the element was not found, return -1
         mov     rax, -1                     ; return -1 to indicate that the searched timeval was not found
@@ -261,7 +261,7 @@ list_find_not_found:
         pop     rbp
         ret
 
-list_find_match:
+.match:
 
         ; if the element was found inside the loop, return the current counter (position of the element)
         mov     rax, rcx                    ; return the current counter (position of the found element)
@@ -287,34 +287,34 @@ list_get:
         ; check if the list size is 0
         mov     rax, [listSize]            ; load the size of the list into rax
         cmp     rax, 0                     ; check if the size is 0
-        je      list_get_not_found         ; if so, return false
+        je      .not_found         ; if so, return false
 
         ; check if the index is bigger than the list size
         mov     rax, [listSize]            ; load the size of the list into rax
         cmp     rsi, rax                   ; check if the param index is bigger than the size of the list
-        jge     list_get_not_found         ; if so, return false
+        jge     .not_found         ; if so, return false
 
         ; check if the index is smaller than 0
         cmp     rsi, 0                     ; check if the param index is smaller than 0
-        jl      list_get_not_found         ; if so, return false
+        jl      .not_found         ; if so, return false
 
 
         ; get the adress of the list element with the given index
         mov     rbx, [startAdress]         ; load the start adress of the list into rbx
         xor     rcx, rcx                   ; clear rcx (counter = 0)
 
-list_get_loop:
+.loop:
 
         ; check if the counter is equal the index
         cmp     rcx, rsi                   ; check if the counter is equal the index
-        je      list_get_loop_exit         ; if so, exit the loop
+        je      .loop_exit         ; if so, exit the loop
 
         ; increment the adress by 16 and the counter by 1
         add     rbx, 16                    ; add 16 to the current adress
         inc     rcx                        ; increment the counter
-        jmp     list_get_loop              ; go to the next element of the list
+        jmp     .loop              ; go to the next element of the list
 
-list_get_loop_exit:
+.loop_exit:
 
         ; get the timeval.tv_sec of the list element with the given index
         mov     rax, [rbx]                 ; load the tv_sec of the list element into rax
@@ -324,7 +324,7 @@ list_get_loop_exit:
         mov     rax, [rbx+8]               ; load the tv_usec of the list element into rax
         mov     [rdi+8], rax               ; save the tv_usec of the list element into the given adress
 
-list_get_done:
+.done:
 
         ; return true
         mov     rax, 1                     ; return 1 to indicate that the timeval was found and copied to the adress
@@ -335,7 +335,7 @@ list_get_done:
         pop     rbp
         ret
 
-list_get_not_found:
+.not_found:
 
         ; return false
         mov     rax, 0                     ; return 0 to indicate that the timeval was not found
