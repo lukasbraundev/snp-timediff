@@ -118,8 +118,8 @@ list_is_sorted_loop:
 
         ; compare the two tv_sec values
         cmp     r9, r8                ; check if the next tv_sec is bigger than the current tv_sec
-        jl      list_is_sorted_exit_not_sorted       ; if not, return false
-        jg      list_is_sorted_already_bigger_tv_sec
+        jb      list_is_sorted_exit_not_sorted       ; if not, return false
+        ja      list_is_sorted_already_bigger_tv_sec
 
         ; load the two tv_usec to compare
         mov     r8, [rbx+8]           ; load the current tv_usec of the list into r8

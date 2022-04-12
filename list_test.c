@@ -36,6 +36,8 @@ struct timeval timestamps[] = {
     {1600000000, 2},
     {1600000000, 5},
     {1700000000, 100000},
+    {17003417482743001, 100000},
+    {17003417482743002, 100000},
     {0, 0}
 };
 
@@ -72,7 +74,7 @@ main(int argc, char *argv[])
     assert(memcmp(&tv_tmp, &timestamps[idx-1], sizeof(struct timeval)) == 0);
     assert(list_find(&timestamps[idx-1]) == idx-1);
 
-    struct timeval tv = {1700000000, 0};
+    struct timeval tv = {17003417482742000, 0};
     list_add(&tv);
     assert(list_size() == idx+1);
     assert(list_is_sorted() == false);
