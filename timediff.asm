@@ -44,7 +44,6 @@ BUFFER_SIZE equ 80
 SECTION .data
         userMsg db 'Please enter a timestamp (to end write "F"): ' ;Message to ask the User to Enter a new timestamp
         lenUserMsg equ $-userMsg                ;The length of the message
-lasttimestamp:  db 1   ;boolean if its last timestamp to void reinits
 
 
 timeval:
@@ -168,15 +167,13 @@ _start:                                 ; Programm Start
 
 .read_next_string:
         ; Read from STD in
-        mov byte [lasttimestamp], 1     ; init the bool
         mov rax, sys_read               ; Sys-Call Number (Read)
         mov rbx, stdin                  ; file discriptor (STD IN)
         mov rcx, buffer                 ; input is stored into timestamp_input
         mov rdx, BUFFER_SIZE            ; size of Input
         int 80h                         ; call Kernel
         test    rax,rax                 ; check system call return value
-        jz      .timestamp_finished      ; jump to exit if nothing is read (end)
-        mov byte [lasttimestamp], 0     ; timstamp is not ended
+        jz      .finishedInput          ; jump to exit if nothing is read (end)
         lea rsi, [buffer]               ; loads adress of first char into rsi
         mov byte [buffer+rax], 128      ; determines the End of the Buffer
 
@@ -233,8 +230,6 @@ _start:                                 ; Programm Start
         pop rsi
         ; addList() Funktion aufrufen TODO Rückgabewert überprüfen
         ; placeholder reinitialize
-        cmp  byte [lasttimestamp], 1
-        je .finishedInput
         mov r12, 0
 .loop_reinit_placeholder:                ; mov ' ' on each index of possible_timechar
         mov dl, byte 32
