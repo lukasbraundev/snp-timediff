@@ -22,10 +22,13 @@ SECTION .data
         sorted_error_len equ $-sorted_error
         memory_allocation_error db 'Memory Error - Allocation of Memory was not possible', 10
         memory_allocation_error_len equ $-memory_allocation_error
+        maxInputError db 'Input Error - maximum count of timestamps', 10
+        maxInputError_len equ $-maxInputError
 
 inputErrorIdx equ 0
 sortedErorIdx equ 1
 memoryErrorIdx equ 2
+maxInputErrorIdx equ 3
 
 ;----------------------------------------------------------------------------
 sys_read equ 3
@@ -52,6 +55,8 @@ displayError:
         je .displaySortedError
         cmp rdi, memoryErrorIdx
         je .displayMemoryError
+        cmp rdi, maxInputErrorIdx
+        je .displayMaxInputError
 
 .displayInputError:
         mov eax, sys_write                      ; Sys-Call Number (Write)
@@ -77,6 +82,13 @@ displayError:
         int 80h                                 ; call Kernel
         jmp .end_function                       ; end function        
 
+.displayMaxInputError:
+        mov eax, sys_write                      ; Sys-Call Number (Write)
+        mov ebx, stdout                         ; file discriptor (STD OUT)
+        mov ecx, maxInputError                  ; Message to write
+        mov edx, maxInputError_len              ; length of the Message
+        int 80h                                 ; call Kernel
+        jmp .end_function                       ; end function        
 
 .end_function:
         pop rdi					; restore callee-saved register

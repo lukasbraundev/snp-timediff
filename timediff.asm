@@ -167,7 +167,7 @@ _start:                                 ; Programm Start
         ;------------------------------------------------------
 .init:
         mov r12, 0                              ; ctr for the possible timechar index
-
+        mov r15, 0                              ; ctr for complete timestamps
 .read_next_string:
         ; Read from STD in
         mov rax, sys_read                       ; Sys-Call Number (Read)
@@ -184,10 +184,10 @@ _start:                                 ; Programm Start
         mov     dl, byte [rsi]                  ; load next char from buffer
         cmp     dl,127                          ; check if its a char
         ja      .read_next_string               ; jump if no char
-        cmp     r12, 27                         ; check if input length is max
-        je      .input_error
         cmp     dl, 10                          ; check for linefeed
         je      .timestamp_finished             ; jump if timestamp detected
+        cmp     r12, 27                         ; check if input length is max
+        je      .input_error
         mov     [possible_timechar + r12], dl
         inc r12                                 ; inc possible timechar index
         inc rsi                                 ; inc adress in Buffer
@@ -196,6 +196,9 @@ _start:                                 ; Programm Start
 
 
 .timestamp_finished:
+        inc r15
+        cmp r15, 100001
+        je .error_max_timestamp
         ; print placeholder for testing purpose
         ; mov rax, sys_write               ; Sys-Call Number (Read)
         ; mov rbx, stdout                  ; file discriptor (STD IN)
@@ -206,6 +209,48 @@ _start:                                 ; Programm Start
         ;________________________________________
 
         ; Check for correct syntax
+        mov r13, 0                              ; Index for each char
+        mov r14, 0                              ; Counter for the correct chars
+
+.verify_before_dot:
+        cmp r14, 21                             ; check if there are more than 20 numbers before the point
+        je .input_error
+        mov dl, byte [possible_timechar + r13]  ; load the char to dl
+        cmp dl, 46                              ; check for .
+        je .point_detected
+        cmp dl, 57                              ; check if ist numeric upper end
+        jg .input_error
+        cmp dl, 48                              ; check if ist numeric lower end
+        jl .input_error
+        inc r13                                 ; inc char index
+        inc r14                                 ; inc correct char Counter
+        jmp .verify_before_dot
+
+
+.point_detected:
+        cmp r14,0                               ; check if there numbers before the point
+        je .input_error
+        mov r14, 0
+        inc r13
+        cmp r13, r12                            ; check if the index is on the End r12 is the length
+        je .input_error                     ; if than verification in finished
+
+.verify_after_dot:
+        cmp r14, 6                              ; check if there are more than 6 numbers after the point
+        je .input_error
+        mov dl, byte [possible_timechar + r13]  ; load the char to dl
+        cmp dl, 57                              ; check if ist numeric upper end
+        jg .input_error
+        cmp dl, 48                              ; check if ist numeric lower end
+        jl .input_error
+        inc r13         ; (123.23)
+        inc r14
+        cmp r13, r12                            ; check if the index is on the End r12 is the length
+        je .verified_finish                     ; if than verification in finished
+        jmp .verify_after_dot        
+
+.verified_finish:
+
         ; call bool ASCII_to_timeval(struct timeval *tv, char *ascii_time, short len)
         push rsi                                ; save register to stack
         push rdx                                ; save register to stack
@@ -441,6 +486,12 @@ _start:                                 ; Programm Start
 
 .memory_error:
         push WORD 3                    ; push idx of error Msg
+        call displayError              ; function call
+        add rsp, 2
+        jmp .exit
+
+.error_max_timestamp:
+        push WORD 4                    ; push idx of error Msg
         call displayError              ; function call
         add rsp, 2
         jmp .exit
