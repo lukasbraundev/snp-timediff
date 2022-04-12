@@ -49,7 +49,7 @@ displayError:
         push rbp				; save stack base of caller
         mov rbp, rsp				; set stack pointer to stack base of callee
         push rdi				; save callee-saved register (index of Error Message is in rdi)
-        cmp rdi, inputErrorIdx
+        cmp rdi, inputErrorIdx                  ; check which messsage to print
         je .displayInputError
         cmp rdi, sortedErorIdx
         je .displaySortedError

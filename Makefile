@@ -16,7 +16,7 @@ CC          = gcc
 LD          = ld
 NASM        = nasm
 NASMOPT64   = -g -f elf64 -F dwarf
-LDOPT64     = -lc -dynamic-linker /lib64/ld-linux-x86-64.so.2
+LDOPT64     = 
 CFLAGS      = -Wall -g -std=gnu11 -O2 -static
 INCDIR      = ./
 

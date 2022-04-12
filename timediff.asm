@@ -11,26 +11,26 @@
 ; Architecture:  x86-64
 ; Language:      NASM Assembly Language
 ;
-; Authors:
+; Authors:       Johannes Brandenburger, Lukas Braun, Henry Schuler
 ;
 ;----------------------------------------------------------------------------
 
 %include "syscall.inc"  ; OS-specific system call macros
 
+;---Function declerations----------------------------------------------------
 extern ASCII_to_timeval
 extern timeval_to_ASCII
 extern timeval_to_daystring
 extern uint_to_ASCII
-
-;---Function declerations----------------------------------------------------
 extern displayError
+
 extern list_init
 extern list_size
 extern list_is_sorted
 extern list_add
 extern list_find
 extern list_get
-;----------------------------------------------------------------------------
+;----Constants----------------------------------------------------------------
 sys_read equ 3
 sys_write equ 4
 stdout equ 1
@@ -42,25 +42,9 @@ BUFFER_SIZE equ 80
 ; SECTION DATA
 ;-----------------------------------------------------------------------------
 SECTION .data
-        userMsg db 'Please enter a timestamp (to end write "F"): '      ;Message to ask the User to Enter a new timestamp
-        lenUserMsg equ $-userMsg                                        ;The length of the message
-
-
 timeval:
         tv_sec  dq 0
         tv_usec dq 0
-
-; Example: implementation of the function ASCII_to_timeval and timeval_to_ASCII
-        timestamp db '8640.0'
-        lenTimestamp equ $-timestamp
-        time_char db 'abcdfghijklmnopqrstupabcdef', 10
-        lenTimeChar equ $-time_char
-; Example: END
-
-; Example: implementation of the function timeval_to_daystring
-        daystring db 'DDDDDDDDDDDDDDD days, HH:MM:SS.UUUUUU', 10
-        lenDaystring equ $-daystring
-; Example: END
 
         possible_timechar db '                            '
         possible_timechar_len equ $-possible_timechar
@@ -93,7 +77,6 @@ timevalDiff:
 ; SECTION BSS
 ;-----------------------------------------------------------------------------
 SECTION .bss
-        timestamp_input resb 128
                 align 128               ; make sure that buffer adress is a multiple of 128
         buffer  resb BUFFER_SIZE        ; buffersize for input
                 resb 128                ; zero after buffer so that buffer end can be determined
@@ -106,64 +89,14 @@ SECTION .text
         ;-----------------------------------------------------------
         ; PROGRAM'S START ENTRY
         ;-----------------------------------------------------------
-        global _start:function          ; make label available to linker
+        global _start:function                  ; make label available to linker
 
-_start:                                 ; Programm Start
-; call error handler function
-        ;push WORD 0                    ; push idx of error Msg
-        ;call displayError              ; function call
-        ;add rsp, 2
-
+_start:                                         ; Programm Start
 
         ; call void list_init(void)
-        call list_init
-
-        ; mov rdi, timeval
-        ; call list_add
-
-; Example: implementation of the function ASCII_to_timeval and timeval_to_ASCII
-        ; ; bool ASCII_to_timeval(struct timeval *tv, char *ascii_time, short len)
-        ; mov rdi, timeval
-        ; mov rsi, timestamp
-        ; xor rdx, rdx
-        ; mov dx, lenTimestamp
-        ; call ASCII_to_timeval
-        ; ; rax now holds 1 if successful, 0 if not
-
-        ; mov rdi, timeval
-        ; call list_add
-        
-        ; ; void timeval_to_ASCII(char *ascii_time, struct timeval *tv)
-        ; mov rdi, time_char
-        ; mov rsi, timeval
-        ; call timeval_to_ASCII
-
-        ; ; Write time_char
-        ; mov eax, sys_write              ; Sys-Call Number (Write)
-        ; mov ebx, stdout                 ; file discriptor (STD OUT)
-        ; mov ecx, time_char              ; Message to write
-        ; mov edx, lenTimeChar            ; length of the Message
-        ; int 80h                         ; call Kernel
-
-; Example: END
-
-; Example: implementation of the function timeval_to_daystring
-        ; ; void timeval_to_daystring(char *daystring, struct timeval *tv)
-        ; mov rdi, daystring
-        ; mov rsi, timeval
-        ; call timeval_to_daystring
-
-        ; ; Write daystring
-        ; mov rax, sys_write              ; Sys-Call Number (Write)
-        ; mov rbx, stdout                 ; file discriptor (STD OUT)
-        ; mov rcx, daystring              ; Message to write
-        ; mov rdx, lenDaystring           ; length of the Message
-        ; int 80h                         ; call Kernel
-
-; Example: END
+        call list_init                          ; Setup the list
         ;------------------------------------------------------
         ; Startig with the Input
-        ; Author: Lukas Braun
         ;------------------------------------------------------
 .init:
         mov r12, 0                              ; ctr for the possible timechar index
@@ -172,23 +105,23 @@ _start:                                 ; Programm Start
         ; Read from STD in
         mov rax, sys_read                       ; Sys-Call Number (Read)
         mov rbx, stdin                          ; file discriptor (STD IN)
-        mov rcx, buffer                         ; input is stored into timestamp_input
+        mov rcx, buffer                         ; input is stored into buffer
         mov rdx, BUFFER_SIZE                    ; size of Input
         int 80h                                 ; call Kernel
-        test    rax,rax                         ; check system call return value
-        jz      .finshed_input                  ; jump to exit if nothing is read (end)
+        test rax,rax                            ; check system call return value
+        jz .finshed_input                       ; jump to exit if nothing is read (end)
         lea rsi, [buffer]                       ; loads adress of first char into rsi
         mov byte [buffer+rax], 128              ; determines the End of the Buffer
 
 .next_char:      
-        mov     dl, byte [rsi]                  ; load next char from buffer
-        cmp     dl,127                          ; check if its a char
-        ja      .read_next_string               ; jump if no char
-        cmp     dl, 10                          ; check for linefeed
-        je      .timestamp_finished             ; jump if timestamp detected
-        cmp     r12, 27                         ; check if input length is max
-        je      .input_error
-        mov     [possible_timechar + r12], dl
+        mov dl, byte [rsi]                      ; load next char from buffer
+        cmp dl, 127                             ; check if its a char
+        ja  .read_next_string                   ; jump if no char
+        cmp dl, 10                              ; check for linefeed
+        je .timestamp_finished                  ; jump if timestamp detected
+        cmp r12, 27                             ; check if input length is max
+        je .input_error
+        mov [possible_timechar + r12], dl
         inc r12                                 ; inc possible timechar index
         inc rsi                                 ; inc adress in Buffer
         jmp .next_char
@@ -196,17 +129,9 @@ _start:                                 ; Programm Start
 
 
 .timestamp_finished:
-        inc r15
-        cmp r15, 10001
-        je .error_max_timestamp
-        ; print placeholder for testing purpose
-        ; mov rax, sys_write               ; Sys-Call Number (Read)
-        ; mov rbx, stdout                  ; file discriptor (STD IN)
-        ; mov rcx, possible_timechar                 ; input is stored into timestamp_input
-        ; mov rdx, r12            ; size of Input
-        ; int 80h      
-
-        ;________________________________________
+        inc r15                                 ; increment foreach completed timestamp
+        cmp r15, 10001                          ; check if maxmimum count
+        je .error_max_timestamp                 ; if max Count jump to error
 
         ; Check for correct syntax
         mov r13, 0                              ; Index for each char
@@ -233,7 +158,7 @@ _start:                                 ; Programm Start
         mov r14, 0
         inc r13
         cmp r13, r12                            ; check if the index is on the End r12 is the length
-        je .input_error                     ; if than verification in finished
+        je .input_error                         ; if than verification in finished
 
 .verify_after_dot:
         cmp r14, 6                              ; check if there are more than 6 numbers after the point
@@ -243,13 +168,13 @@ _start:                                 ; Programm Start
         jg .input_error
         cmp dl, 48                              ; check if ist numeric lower end
         jl .input_error
-        inc r13         ; (123.23)
+        inc r13         
         inc r14
         cmp r13, r12                            ; check if the index is on the End r12 is the length
         je .verified_finish                     ; if than verification in finished
         jmp .verify_after_dot        
 
-.verified_finish:
+.verified_finish:                               ; Syntax verification completed
 
         ; call bool ASCII_to_timeval(struct timeval *tv, char *ascii_time, short len)
         push rsi                                ; save register to stack
@@ -275,21 +200,17 @@ _start:                                 ; Programm Start
         mov r12, 0
 .loop_reinit_placholder:                        ; mov ' ' on each index of possible_timechar
         mov dl, byte 32
-        mov [possible_timechar + r12], dl       ;mov ' ' 
+        mov [possible_timechar + r12], dl       ; mov ' ' 
         inc r12
-        cmp r12, 27
+        cmp r12, 27                             ; check if end of buffer
         jne .loop_reinit_placholder
         mov r12, 0                              ; reset indexctr for possible_timestamp
         inc rsi                                 ; inc buffer index for next char
         jmp .next_char                          ; start reading the next timestamp
 .finshed_input:
-        ; Ausführung der weiteren methoden / berechnung der differenz usw.
-        nop
-
 
         ;-----------------------------------------------------------
         ; ALL INPUTS ARE DONE, START WITH OUTPUT
-        ; Author: Henry Schuler
         ;-----------------------------------------------------------
 
 .start_output:
@@ -336,7 +257,7 @@ _start:                                 ; Programm Start
         int 80h
 
         cmp rax, 0                              ; check if sys_brk was successful (-1 if not)
-        jl .memory_error                         ; exit because memory could not be allocated
+        jl .memory_error                        ; exit because memory could not be allocated
 
         ; memory is allocated
         pop rbx                                 ; restore rbx
@@ -350,7 +271,7 @@ _start:                                 ; Programm Start
         call list_get                           ; get the first timestamp
         
         cmp rax, 0                              ; check if list_get was successful
-        je .exit                                ; TODO: exit because list_get was not successful
+        je .exit                                ; exit because list_get was not successful
         
         ; first timestamp in timevalOne
         inc WORD [nextTimestamp]                ; increment lastGotTimestamp
@@ -401,7 +322,7 @@ _start:                                 ; Programm Start
         call list_get                           ; get the next timestamp
 
         cmp rax, 0                              ; check if list_get was successful
-        je .exit                                ; TODO: exit because list_get was not successful
+        je .exit                                ; exit because list_get was not successful
 
         ; next timestamp in timevalTwo
         inc WORD [nextTimestamp]                ; increment lastGotTimestamp
@@ -425,6 +346,7 @@ _start:                                 ; Programm Start
         sub rax, [timevalOne + 8]               ; subtract tv_usecOne from tv_usecTwo
         jnc .positive_value                     ; jump if rax is positive
         add rax, 1000000                        ; negative rax -> add 1000000 to get positive value (does create CF too so sbb will work fine later on)
+
 .positive_value:
         mov [timevalDiff + 8], rax              ; store the difference in tv_usecDiff
 
@@ -470,7 +392,6 @@ _start:                                 ; Programm Start
 
         ;------------------------------------------------------
         ; Jump Labels to call the Error handler
-        ; Author: Lukas Braun
         ;------------------------------------------------------
 .input_error:
         push WORD 0                    ; push idx of error Msg
