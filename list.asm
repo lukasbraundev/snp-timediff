@@ -58,7 +58,7 @@ list_init:
 
         ; set the second breakpoint (end of the list)
         mov     [startAdress], rax      ; save start adress of the program in startAdress
-        add     rax, 160000             ; add number of bytes to be reserved (10 000 * 2 * 8)
+        add     rax, 1048576            ; add number of bytes to be reserved (65 536 (16 bit) * 2 (tv_sec + tv_usec) * 8)
         mov     rbx, rax                ; save the adress of second breakpoint in rbx
         mov     rax, 45                 ; load sys_brk (allocate mem) into eax
         int     80h                     ; call sys_brk (second breakpoint)
