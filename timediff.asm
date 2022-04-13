@@ -48,6 +48,7 @@ timeval:
 
         possible_timechar db '                            '     ; 28 characters to hold timeval input (S+.M+)
         possible_timechar_len equ $-possible_timechar
+        timestampSecondDigits dq 0              ; holds the amount of read second digits
 
         ;-----------------------------------------------------------
         ; ALLOCATE MEMORY FOR OUTPUT
@@ -151,9 +152,10 @@ _start:                                         ; Programm Start
         jmp .verify_before_dot
 
 
-.point_detected:                                ; TODO: Write into counter for byte reservation later
+.point_detected:
         cmp r14,0                               ; check if there numbers before the point
         je .input_error
+        add [timestampSecondDigits], r14        ; add the number of digits before the point to the counter (needed for output later)
         mov r14, 0
         inc r13
         cmp r13, r12                            ; check if the index is on the End r12 is the length
@@ -225,21 +227,24 @@ _start:                                         ; Programm Start
         je .not_sorted_error                    ; exit because list not sorted
 
         ; min. 1 timestamp in list and list is sorted
-.calculate_required_memory:                     ; TODO: Calculate according to input timestamp length -> less space needed
-        ; first line: 28 BYTEs
-        ; following lines: 8 (separator) + 28 (timestamp) + 38 (timediff) = 74 BYTEs
+.calculate_required_memory:
+        xor rax, rax                            ; reset rax to hold the amount of bytes needed
+        add rax, [timestampSecondDigits]        ; add the amount of digits for the seconds of all timestamps (evaluated during input)
+        
+        ; first line: 8 BYTEs
+        add rax, 8                              ; add momory for first line '.' + microseconds + line feed
+
         mov cx, WORD [amountOfTimestamps]       ; set counter to amount of timestamps
-        mov rax, 28                             ; add momory for first line
 .calculate_space_following_line:
         dec cx                                  ; decrement counter
         jz .allocate_memory                     ; if counter is 0, allocate memory
-        add rax, 74                             ; add memory for following line
+        ; following lines: 8 (separator) + 8 (timestamp: '.' + microseconds + line feed) + 38 (timediff) = 54 BYTEs
+        add rax, 54                             ; add memory for following line
         jmp .calculate_space_following_line     ; repeat
 
 .allocate_memory:
         mov [requiredMemory], rax               ; store the required memory in requiredMemory
 
-        push rbx                                ; save rbx
         ; set the first breakpoint
         mov rax, 45                             ; load sys_brk into rax
         xor rbx, rbx                            ; clear rbx needed for sys_brk
@@ -259,7 +264,6 @@ _start:                                         ; Programm Start
         jl .memory_error                        ; exit because memory could not be allocated
 
         ; memory is allocated
-        pop rbx                                 ; restore rbx
 
 .fill_allocated_memory:
         ; add first timestamp to output
@@ -274,7 +278,7 @@ _start:                                         ; Programm Start
         
         ; first timestamp in timevalOne
         inc WORD [nextTimestamp]                ; increment lastGotTimestamp
-        ; call short timeval_to_ASCII(char *ascii_time, struct timeval *tv) TODO: needs to return written chars -> increment address
+        ; call short timeval_to_ASCII(char *ascii_time, struct timeval *tv)
         mov rdi, [outputAddress]                ; set ascii_time to the start address of the allocated memory
         mov rsi, timevalOne                     ; set tv to timevalOne
         
@@ -282,7 +286,7 @@ _start:                                         ; Programm Start
 
         ; add linebreak after first timestamp
         mov rdi, [outputAddress]                ; set rdi to the start address of the allocated memory
-        add rdi, rax                            ; get to the end of the first timestamp
+        add rdi, rax                            ; get to the end of the first timestamp (rax from timeval_to_ASCII)
         mov BYTE [rdi], 10                      ; add linebreak after first timestamp
 
         ; update the new writing address
@@ -306,7 +310,7 @@ _start:                                         ; Programm Start
 
         ; add linebreak after separator
         mov rdi, [currentWritingAddress]        ; set rdi to the start address of the separator
-        add rdi, rax                              ; get to the end of the separator
+        add rdi, rax                            ; get to the end of the separator (rax from uint_to_ASCII)
         mov BYTE [rdi], 10                      ; add linebreak after separator
 
         ; update the new writing address
@@ -333,7 +337,7 @@ _start:                                         ; Programm Start
 
         ; add linebreak after timestamp
         mov rdi, [currentWritingAddress]        ; set rdi to the start current of the allocated memory
-        add rdi, rax                             ; get to the end of the timestamp
+        add rdi, rax                            ; get to the end of the timestamp (rax from timeval_to_ASCII)
         mov BYTE [rdi], 10                      ; add linebreak after timestamp
 
         ; update the new writing address
@@ -362,7 +366,7 @@ _start:                                         ; Programm Start
 
         ; add linebreak after daystring
         mov rdi, [currentWritingAddress]        ; set rdi to the start address of the allocated memory
-        add rdi, rax                             ; get to the end of the daystring
+        add rdi, rax                            ; get to the end of the daystring (rax from timeval_to_daystring)
         mov BYTE [rdi], 10                      ; add linebreak after daystring
 
         ; update the new writing address
@@ -394,27 +398,23 @@ _start:                                         ; Programm Start
         ; Jump Labels to call the Error handler
         ;------------------------------------------------------
 .input_error:
-        push WORD 0                    ; push idx of error Msg
-        call displayError              ; function call
-        add rsp, 2
+        mov rdi, 0                              ; push idx of error Msg
+        call displayError                       ; function call
         jmp .exit
 
 .not_sorted_error:
-        push WORD 1                    ; push idx of error Msg
-        call displayError              ; function call
-        add rsp, 2
+        mov rdi, 1                              ; push idx of error Msg
+        call displayError                       ; function call
         jmp .exit
 
 .memory_error:
-        push WORD 3                    ; push idx of error Msg
-        call displayError              ; function call
-        add rsp, 2
+        mov rdi, 3                              ; push idx of error Msg
+        call displayError                       ; function call
         jmp .exit
 
 .error_max_timestamp:
-        push WORD 4                    ; push idx of error Msg
-        call displayError              ; function call
-        add rsp, 2
+        mov rdi, 4                              ; push idx of error Msg
+        call displayError                       ; function call
         jmp .exit
 
         ;-----------------------------------------------------------

@@ -40,12 +40,12 @@ SECTION .text
 ;-----------------------------------------------------------------------------
         global timeval_to_daystring:function
 timeval_to_daystring:
-        push rbp				; save stack base of caller
-        mov rbp, rsp				; set stack pointer to stack base of callee
-        push rbx				; save callee-saved register
-        push r12				; save callee-saved register
+        push rbp                                ; save stack base of caller
+        mov rbp, rsp                            ; set stack pointer to stack base of callee
+        push rbx                                ; save callee-saved register
+        push r12                                ; save callee-saved register
 
-        mov [daystringBase], rdi		; save pointer to daystring
+        mov [daystringBase], rdi                ; save pointer to daystring
         mov [tvBase], rsi                       ; save pointer to timeval struct
 
         xor r12, r12                            ; clear counter for written characters
@@ -155,8 +155,8 @@ timeval_to_daystring:
         xor rax, rax                            ; reset return value
         mov ax, r12w                            ; set return value to written characters
 
-        pop r12					; restore callee-saved register
-        pop rbx					; restore callee-saved register
-        mov rsp, rbp				; restore stack pointer of caller
-        pop rbp					; restore stack base of caller
+        pop r12                                 ; restore callee-saved register
+        pop rbx                                 ; restore callee-saved register
+        mov rsp, rbp                            ; restore stack pointer of caller
+        pop rbp                                 ; restore stack base of caller
         ret

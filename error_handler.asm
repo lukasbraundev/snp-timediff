@@ -16,11 +16,11 @@
 %include "syscall.inc"
 
 SECTION .data
-        inpuError db 'Input Error - incorrcet input', 10
+        inpuError db 'Input Error - incorrect input', 10
         inputError_len equ $-inpuError
-        sorted_error db 'Sorted Error - Orde of timestamp incorrect', 10
+        sorted_error db 'Sorted Error - order of timestamp incorrect', 10
         sorted_error_len equ $-sorted_error
-        memory_allocation_error db 'Memory Error - Allocation of Memory was not possible', 10
+        memory_allocation_error db 'Memory Error - allocation of Memory was not possible', 10
         memory_allocation_error_len equ $-memory_allocation_error
         maxInputError db 'Input Error - maximum count of timestamps', 10
         maxInputError_len equ $-maxInputError
@@ -46,9 +46,8 @@ SECTION .text
 ;-----------------------------------------------------------------------------
         global displayError:function
 displayError:
-        push rbp				; save stack base of caller
-        mov rbp, rsp				; set stack pointer to stack base of callee
-        push rdi				; save callee-saved register (index of Error Message is in rdi)
+        push rbp                                ; save stack base of caller
+        mov rbp, rsp                            ; set stack pointer to stack base of callee
         cmp rdi, inputErrorIdx                  ; check which messsage to print
         je .displayInputError
         cmp rdi, sortedErorIdx
@@ -91,7 +90,6 @@ displayError:
         jmp .end_function                       ; end function        
 
 .end_function:
-        pop rdi					; restore callee-saved register
-        mov rsp, rbp				; restore stack pointer of caller
-        pop rbp					; restore stack base of caller
+        mov rsp, rbp                            ; restore stack pointer of caller
+        pop rbp                                 ; restore stack base of caller
         ret

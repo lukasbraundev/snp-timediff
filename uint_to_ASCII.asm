@@ -36,18 +36,18 @@ SECTION .text
 ;-----------------------------------------------------------------------------
         global uint_to_ASCII:function
 uint_to_ASCII:
-        push rbp				; save stack base of caller
-        mov rbp, rsp				; set stack pointer to stack base of callee
-        push rbx				; save callee-saved register
+        push rbp                                ; save stack base of caller
+        mov rbp, rsp                            ; set stack pointer to stack base of callee
+        push rbx                                ; save callee-saved register
 
-        mov [stringBase], rdi		        ; save pointer to string
+        mov [stringBase], rdi                   ; save pointer to string
         mov [number], rsi                       ; save number to convert
         mov [length], dx                        ; save length of string
         mov [fillCharacter], cl                 ; save fill character
         mov [printZero], r8                     ; save printZero flag
 
         movzx rsi, BYTE [fillCharacter]         ; set fill character
-        mov rdi, [stringBase]			; set pointer to string
+        mov rdi, [stringBase]                   ; set pointer to string
         mov rax, [number]                       ; load number to convert
         movzx rcx, WORD [length]                ; set counter to length of string
         mov rbx, 10                             ; set divisor to 10
@@ -111,7 +111,7 @@ uint_to_ASCII:
         xor rax, rax                            ; clear return value
         mov ax, r9w                             ; set return value to written digits
 
-        pop rbx					; restore callee-saved register
-        mov rsp, rbp				; restore stack pointer of caller
-        pop rbp					; restore stack base of caller
+        pop rbx                                 ; restore callee-saved register
+        mov rsp, rbp                            ; restore stack pointer of caller
+        pop rbp                                 ; restore stack base of caller
         ret
