@@ -29,8 +29,10 @@ SECTION .data
 SECTION .text
 
 ;-----------------------------------------------------------------------------
-; extern void uint_to_ASCII(char *string, long number, short length, char fillCharacter, bool printZero);
+; extern short uint_to_ASCII(char *string, long number, short length, char fillCharacter, bool printZero);
+; fillCharacter: 0 = left-aligned without filling, rest: print right-aligned with fillCharacter
 ; printZero: 0 = false, 1 = true
+; return: number of characters written to string
 ;-----------------------------------------------------------------------------
         global uint_to_ASCII:function
 uint_to_ASCII:
@@ -49,6 +51,24 @@ uint_to_ASCII:
         mov rax, [number]                       ; load number to convert
         movzx rcx, WORD [length]                ; set counter to length of string
         mov rbx, 10                             ; set divisor to 10
+        xor r9, r9                              ; set counter for written digits to 0
+
+.evaluate_length:                               ; if var length is zero, evaluate length
+        cmp rsi, 0                              ; check if fill character is zero
+        jne .evaluate_printZero                 ; if not, jump to next step
+        xor r8, r8                              ; reset r8 to hold evaluated length
+.start_evaluate_length:                         ; start evaluation of length
+        test rax, rax                           ; 
+        jz .end_evaluate_length                 ; if number is zero, evaluation is done
+        xor rdx, rdx
+        div rbx                                 ; divide number by divisor
+        inc r8                                  ; increment evaluated length
+        jmp .start_evaluate_length              ; repeat evaluation
+.end_evaluate_length:
+        mov rax, [number]                       ; restore number
+        cmp r8, rcx                             ; compare evaluated length with length
+        ja .evaluate_printZero                  ; if evaluated length is greater, jump to next step (=> use length)
+        mov rcx, r8                             ; else set length to evaluated length
 
 .evaluate_printZero:
         mov r8, [printZero]                     ; load printZero flag
@@ -56,11 +76,15 @@ uint_to_ASCII:
         je .start_conversion                    ; if flag is not set, jump to start conversion
         cmp rax, 0                              ; check if number is zero
         jne .start_conversion                   ; if number is not zero, jump to start conversion
+        test rcx, rcx                           ; check if counter is zero
+        jz .printZero                           ; if counter is zero, print zero
         dec rcx                                 ; decrement counter to get the index of the last character
+.printZero:
         mov BYTE [rdi + rcx], '0'               ; set last character to '0'
+        inc r9w                                 ; increment written digits
+        test rcx, rcx                           ; check if counter is zero
         jz .end_function                        ; if counter is zero, jump to end function
         jmp .fill_with_fillCharacter            ; jump to fill with fill character to fill the rest of the string
-
 
 .start_conversion:
         test rax, rax                           ; check if number is zero
@@ -70,17 +94,23 @@ uint_to_ASCII:
         div rbx                                 ; divide number by 10
         add dl, '0'                             ; add '0' to dl to get ASCII value of dl
         mov BYTE [rdi + rcx], dl                ; store ASCII value in string
+        inc r9w                                 ; increment written digits
         cmp rcx, 0                              ; check if counter is 0
         jne .start_conversion
         je .end_function
 
 .fill_with_fillCharacter:
+        test rcx, rcx                           ; test counter
+        jz .end_function                        ; if counter is zero, jump to end function
         dec rcx                                 ; decrement counter to get index
         mov BYTE [rdi + rcx], sil               ; fill string with fill character
-        cmp rcx, 0                              ; check if counter is 0
-        ja .fill_with_fillCharacter             ; if not, fill string with fill character
+        inc r9w                                 ; increment written digits
+        jmp .fill_with_fillCharacter            ; repeat filling
 
 .end_function:
+        xor rax, rax                            ; clear return value
+        mov ax, r9w                             ; set return value to written digits
+
         pop rbx					; restore callee-saved register
         mov rsp, rbp				; restore stack pointer of caller
         pop rbp					; restore stack base of caller

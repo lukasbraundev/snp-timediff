@@ -31,10 +31,10 @@ extern list_add
 extern list_find
 extern list_get
 ;----Constants----------------------------------------------------------------
+stdin equ 0
+stdout equ 1
 sys_read equ 3
 sys_write equ 4
-stdout equ 1
-stdin equ 0
 
 BUFFER_SIZE equ 80
 
@@ -46,16 +46,17 @@ timeval:
         tv_sec  dq 0
         tv_usec dq 0
 
-        possible_timechar db '                            '
+        possible_timechar db '                            '     ; 28 characters to hold timeval input (S+.M+)
         possible_timechar_len equ $-possible_timechar
 
         ;-----------------------------------------------------------
         ; ALLOCATE MEMORY FOR OUTPUT
         ;-----------------------------------------------------------
-        amountOfTimestamps dw 0
-        requiredMemory dq 0
-        outputAddress dq 0
-        currentWritingAddress dq 0
+        amountOfTimestamps dw 0                 ; holds the amount of timestamps in the list
+        requiredMemory dq 0                     ; holds the required memory for the ouput in Bytes
+        outputAddress dq 0                      ; holds the start address of the output buffer
+        currentWritingAddress dq 0              ; holds the current writing address in the output buffer
+        nextTimestamp dw 0                      ; holds the index of the next timestamp in the list
 
 timevalOne:
         tv_secOne dq 0
@@ -67,8 +68,6 @@ timevalDiff:
         tv_secDiff dq 0
         tv_usecDiff dq 0
         
-        nextTimestamp dw 0
-
         ;-----------------------------------------------------------
         ; MEMORY FOR OUTPUT END
         ;-----------------------------------------------------------
@@ -152,7 +151,7 @@ _start:                                         ; Programm Start
         jmp .verify_before_dot
 
 
-.point_detected:
+.point_detected:                                ; TODO: Write into counter for byte reservation later
         cmp r14,0                               ; check if there numbers before the point
         je .input_error
         mov r14, 0
@@ -226,7 +225,7 @@ _start:                                         ; Programm Start
         je .not_sorted_error                    ; exit because list not sorted
 
         ; min. 1 timestamp in list and list is sorted
-.calculate_required_memory:
+.calculate_required_memory:                     ; TODO: Calculate according to input timestamp length -> less space needed
         ; first line: 28 BYTEs
         ; following lines: 8 (separator) + 28 (timestamp) + 38 (timediff) = 74 BYTEs
         mov cx, WORD [amountOfTimestamps]       ; set counter to amount of timestamps
@@ -275,7 +274,7 @@ _start:                                         ; Programm Start
         
         ; first timestamp in timevalOne
         inc WORD [nextTimestamp]                ; increment lastGotTimestamp
-        ; call void timeval_to_ASCII(char *ascii_time, struct timeval *tv)
+        ; call short timeval_to_ASCII(char *ascii_time, struct timeval *tv) TODO: needs to return written chars -> increment address
         mov rdi, [outputAddress]                ; set ascii_time to the start address of the allocated memory
         mov rsi, timevalOne                     ; set tv to timevalOne
         
@@ -283,21 +282,21 @@ _start:                                         ; Programm Start
 
         ; add linebreak after first timestamp
         mov rdi, [outputAddress]                ; set rdi to the start address of the allocated memory
-        add rdi, 27                             ; get to the end of the first timestamp
+        add rdi, rax                            ; get to the end of the first timestamp
         mov BYTE [rdi], 10                      ; add linebreak after first timestamp
+
+        ; update the new writing address
+        inc rdi                                 ; increment rdi to the start address of the next timestamp
+        mov [currentWritingAddress], rdi        ; store the current writing address in currentWritingAddress
 
         ; first timestamp is written -> check if there are more timestamps
         mov cx, WORD [amountOfTimestamps]       ; set counter to amount of timestamps
         dec cx                                  ; decrement counter (first timestamp is written)
         jz .print_output
 
-
-        mov rax, [outputAddress]
-        add rax, 28                             ; get to the start of the second timestamp
-        mov [currentWritingAddress], rax        ; store the current writing address in currentWritingAddress
 .add_following_timestamps:
         ; add separator
-        ; call void uint_to_ASCII(char *string, long number, short length, char fillCharacter, bool printZero)
+        ; call short uint_to_ASCII(char *string, long number, short length, char fillCharacter, bool printZero)
         mov rdi, [currentWritingAddress]        ; set string to the start address of the separator
         mov rsi, 0                              ; set number to 0
         mov dx, 7                               ; set length to 7
@@ -307,7 +306,7 @@ _start:                                         ; Programm Start
 
         ; add linebreak after separator
         mov rdi, [currentWritingAddress]        ; set rdi to the start address of the separator
-        add rdi, 7                              ; get to the end of the separator
+        add rdi, rax                              ; get to the end of the separator
         mov BYTE [rdi], 10                      ; add linebreak after separator
 
         ; update the new writing address
@@ -326,7 +325,7 @@ _start:                                         ; Programm Start
 
         ; next timestamp in timevalTwo
         inc WORD [nextTimestamp]                ; increment lastGotTimestamp
-        ; call void timeval_to_ASCII(char *ascii_time, struct timeval *tv)
+        ; call short timeval_to_ASCII(char *ascii_time, struct timeval *tv)
         mov rdi, [currentWritingAddress]        ; set ascii_time to the current address of the allocated memory
         mov rsi, timevalTwo                     ; set tv to timevalTwo
 
@@ -334,7 +333,7 @@ _start:                                         ; Programm Start
 
         ; add linebreak after timestamp
         mov rdi, [currentWritingAddress]        ; set rdi to the start current of the allocated memory
-        add rdi, 27                             ; get to the end of the timestamp
+        add rdi, rax                             ; get to the end of the timestamp
         mov BYTE [rdi], 10                      ; add linebreak after timestamp
 
         ; update the new writing address
@@ -355,7 +354,7 @@ _start:                                         ; Programm Start
         mov [timevalDiff], rax                  ; store the difference in tv_secDiff
 
         ; difference is now in timevalDiff
-        ; call void timeval_to_daystring(char *daystring, struct timeval *tv)
+        ; call short timeval_to_daystring(char *daystring, struct timeval *tv)
         mov rdi, [currentWritingAddress]        ; set daystring to the current address of the allocated memory
         mov rsi, timevalDiff                    ; set tv to timevalDiff
 
@@ -363,7 +362,7 @@ _start:                                         ; Programm Start
 
         ; add linebreak after daystring
         mov rdi, [currentWritingAddress]        ; set rdi to the start address of the allocated memory
-        add rdi, 37                             ; get to the end of the daystring
+        add rdi, rax                             ; get to the end of the daystring
         mov BYTE [rdi], 10                      ; add linebreak after daystring
 
         ; update the new writing address
@@ -385,8 +384,9 @@ _start:                                         ; Programm Start
 .print_output:
         mov rax, sys_write
         mov rbx, stdout
-        mov rcx, [outputAddress]
-        mov rdx, [requiredMemory]
+        mov rcx, [outputAddress]                ; set start address of printing area
+        mov rdx, [currentWritingAddress]        ; load current writing address into rdx
+        sub rdx, [outputAddress]                ; subtract start address to get the amount of bytes to print
         int 80h
         jmp .exit
 
