@@ -155,7 +155,6 @@ list_is_sorted:
         ret
 
 
-
 ;-----------------------------------------------------------------------------
 ; extern short list_add(struct timeval *tv);
 ;-----------------------------------------------------------------------------
@@ -218,42 +217,136 @@ list_find:
         mov     rbp,rsp
 
         push    rbx
+        push    r12
+        push    r13
+        push    r14
 
-        ; load the values of the timeval into r8 and r9
-        mov     r8, [rdi]                       ; load the struct timeval.tv_sec into r8
-        mov     r9, [rdi+8]                     ; load the struct timeval.tv_usec into r9
+        ; store given tv
+        mov     r10, rdi                 ; write the adress of the tv in r10
 
-        ; start the loop
-        mov     rbx, [startAdress]              ; load the start adress of the list into rbx
-        xor     rcx, rcx                        ; clear rcx (counter = 0)
+        ; immediately return 0 if the list is empty
+        mov     rax, [listSize]          ; load the size of the list into rax
+        cmp     rax, 0                   ; check if the list is empty
+        je      .exit_not_found          ; if so, return false
+
+        ; check if tv is smaller or equal than the smallest tv
+        mov     rdi, r10                 ; write adress of given tv in rdi (for compare_timevals())
+        mov     rsi, [startAdress]       ; write start adress of list in rsi (for compare_timevals())
+        mov     rbx, 0                   ; current comparison at index 0 (for return) 
+        call    compare_timevals         ; compaires tv at rdi and rsi 
+        cmp     rax, 1                   ; rax: 0 (rdi<rsi), 1 (rdi==rsi), 2 (rdi>rsi), 
+        je      .exit_found              ; if equal -> found already
+        jb      .exit_not_found          ; if smaller the tv is not in the list
+
+        ; check if tv is bigger or equal than the biggest tv
+        mov     rdi, [listSize]          ; write current list size in rdi
+        dec     rdi                      ; decrement it (getting last tv's index)
+        mov     rbx, rdi                 ; current comparison at last (for return) 
+        call    get_adress_by_index      ; get adress from index in rdi in rax
+        mov     rdi, r10                 ; write adress of given tv in rdi (for compare_timevals())
+        mov     rsi, rax                 ; write adress of last tv in rsi (for compare_timevals())
+        call    compare_timevals         ; compaires tv at rdi and rsi 
+        cmp     rax, 1                   ; rax: 0 (rdi<rsi), 1 (rdi==rsi), 2 (rdi>rsi), 
+        je      .exit_found              ; if equal -> found already
+        ja      .exit_not_found          ; if smaller the tv is not in the list
+        
+        ; define bounds (r11, r13)
+        mov     r11, 0                   ; lower border
+        mov     r13, [listSize]     
+        dec     r13                      ; higher border
 
 .loop:
 
-        ; check if the counter is equal than the size of the list
-        cmp     rcx, [listSize]                 ; check if the counter is equal the size of the list
-        je      .not_found                      ; if so, the element was not found -> return -1
+        ; get middle of borders (r12)
+        mov     rax, r13
+        sub     rax, r11
+        mov     r14, 2
+        xor     rdx, rdx
+        div     r14
+        add     rax, r11
+        mov     r12, rax                 ; middle of borders
 
-        ; check if the tv_sec of the current element is equal to the given timeval.tv_sec
-        mov     rax, [rbx]                      ; load the current tv_sec of the list into rax
-        cmp     rax, r8                         ; check if the current tv_sec is equal to the tv_sec of the searched timeval
-        jne     .skip_check_usec                ; if not equal, go to the next element of the list (skip the check of the tv_usec)
+        ; compair middle with 
+        mov     rbx, r12                 ; current comparison at middle (for return) 
+        mov     rdi, r12
+        call    get_adress_by_index      ; get middle adress
+        mov     rdi, r10                 ; write adress of given tv in rdi (for compare_timevals())
+        mov     rsi, rax                 ; write middle adress in rsi (for compare_timevals())
+        call    compare_timevals
+        cmp     rax, 1
+        jb      .lower
+        ja      .higher
+        je      .exit_found
 
-        ; check if the tv_usec of the current element is equal to the given timeval.tv_usec
-        mov     rax, [rbx+8]                    ; load the current tv_usec of the list into rax
-        cmp     rax, r9                         ; check if the current tv_usec is equal to the tv_usec of the searched timeval
-        je      .match                          ; if so -> match -> return the current position of the list
+.lower:
 
-.skip_check_usec:
+        cmp     r11, r13
+        je      .exit_not_found
 
-        ; increment the adress by 16 and increment the counter by 1
-        add     rbx, 16                         ; add 16 to the current adress
-        inc     rcx                             ; increment the counter
-        jmp     .loop
+        ; higher bound = middle
+        mov     r13, r12
+        jmp    .loop
 
-.not_found:
+.higher:
 
-        ; if the loop goes through the whole list and the element was not found, return -1
-        mov     rax, -1                         ; return -1 to indicate that the searched timeval was not found
+        ; check if lower border == middle 
+        cmp     r11, r12
+        cmove   r11, r13
+
+        ; lower bound = middle
+        cmovne     r11, r12
+        jmp    .loop
+
+
+.exit_not_found:
+
+        mov     rax, -1
+        jmp     .end_return
+
+.exit_found:
+
+        mov     rax, rbx
+        jmp     .end_return 
+
+.end_return:
+
+        pop     r14
+        pop     r13
+        pop     r12
+        pop     rbx
+
+        mov     rsp,rbp
+        pop     rbp
+        ret
+
+
+;-----------------------------------------------------------------------------
+; extern int get_adress_by_index(int index);
+; rdi (index) -> rax (adress)   NOTE: can be improved 
+;-----------------------------------------------------------------------------
+        global get_adress_by_index:function
+get_adress_by_index: 
+
+        push    rbp
+        mov     rbp,rsp
+
+        push    rbx
+        
+        xor     rcx, rcx                ; clear counter
+        mov     rbx, [startAdress]      ; start adress in rbx
+
+.loop:
+
+        cmp     rcx, rdi                ; compair the current index with the given index
+        je      .loop_exit              ; if equal -> finished
+
+        add     rbx, 16                 ; increment the current adress with 16
+        inc     rcx                     ; increment the current index (counter) with 1
+        jmp     .loop                   ; next index
+   
+.loop_exit:
+
+        mov     rax, rbx                ; return the current adress
 
         pop     rbx
 
@@ -261,14 +354,59 @@ list_find:
         pop     rbp
         ret
 
-.match:
 
-        ; if the element was found inside the loop, return the current counter (position of the element)
-        mov     rax, rcx                        ; return the current counter (position of the found element)
+;-----------------------------------------------------------------------------
+; int compare_timevals(struct timeval *tv1, struct timeval *tv2) (RDX, RSI)
+; returns in RAX:
+;       0 if tv1 < tv2
+;       1 if tv1 == tv2
+;       2 if tv1 > tv2
+;-----------------------------------------------------------------------------
+        global compare_timevals:function
+compare_timevals:
 
-        pop     rbx
+        push    rbp
+        mov     rbp, rsp
 
-        mov     rsp,rbp
+        ; load the two tv_sec to compare
+        mov     r8, [rdi]               ; load first tv_sec into r8
+        mov     r9, [rsi]               ; load second tv_sec into r8
+
+        ; compare the two tv_sec values
+        cmp     r8, r9                  ; compare the two tv_sec
+        jb      .smaller                ; if already smaller return 0
+        ja      .bigger                 ; if already bigger return 2
+        
+        ; load the two tv_usec to compare
+        mov     r8, [rdi+8]             ; load first tv_usec into r8
+        mov     r9, [rsi+8]             ; load second tv_usec into r9
+
+        ; compare the two tv_usec values
+        cmp     r8, r9                  ; compare the two tv_sec
+        jb      .smaller                ; if smaller return 0
+        ja      .bigger                 ; if bigger return 2
+        je      .equal                  ; if equal return 1
+
+.smaller:
+
+        mov     rax, 0                  ; return 0 
+        call    .compaired
+
+
+.bigger:
+
+        mov     rax, 2                  ; return 2
+        call    .compaired
+
+
+.equal:
+
+        mov     rax, 1                  ; return 1
+        call    .compaired
+
+.compaired:
+
+        mov     rsp, rbp
         pop     rbp
         ret
 
