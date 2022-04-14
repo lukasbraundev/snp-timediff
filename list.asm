@@ -222,56 +222,60 @@ list_find:
         push    r14
 
         ; store given tv
-        mov     r10, rdi                 ; write the adress of the tv in r10
+        mov     r10, rdi                ; write the adress of the tv in r10
 
         ; immediately return 0 if the list is empty
-        mov     rax, [listSize]          ; load the size of the list into rax
-        cmp     rax, 0                   ; check if the list is empty
-        je      .exit_not_found          ; if so, return false
+        mov     rax, [listSize]         ; load the size of the list into rax
+        cmp     rax, 0                  ; check if the list is empty
+        je      .exit_not_found         ; if so, return false
 
         ; check if tv is smaller or equal than the smallest tv
-        mov     rdi, r10                 ; write adress of given tv in rdi (for compare_timevals())
-        mov     rsi, [startAdress]       ; write start adress of list in rsi (for compare_timevals())
-        mov     rbx, 0                   ; current comparison at index 0 (for return) 
-        call    compare_timevals         ; compaires tv at rdi and rsi 
-        cmp     rax, 1                   ; rax: 0 (rdi<rsi), 1 (rdi==rsi), 2 (rdi>rsi), 
-        je      .exit_found              ; if equal -> found already
-        jb      .exit_not_found          ; if smaller the tv is not in the list
+        mov     rdi, r10                ; write adress of given tv in rdi (for compare_timevals())
+        mov     rsi, [startAdress]      ; write start adress of list in rsi (for compare_timevals())
+        mov     rbx, 0                  ; current comparison at index 0 (for return) 
+        call    compare_timevals        ; compaires tv at rdi and rsi 
+        cmp     rax, 1                  ; rax: 0 (rdi<rsi), 1 (rdi==rsi), 2 (rdi>rsi), 
+        je      .exit_found             ; if equal -> found already
+        jb      .exit_not_found         ; if smaller the tv is not in the list
 
         ; check if tv is bigger or equal than the biggest tv
-        mov     rdi, [listSize]          ; write current list size in rdi
-        dec     rdi                      ; decrement it (getting last tv's index)
-        mov     rbx, rdi                 ; current comparison at last (for return) 
-        call    get_adress_by_index      ; get adress from index in rdi in rax
-        mov     rdi, r10                 ; write adress of given tv in rdi (for compare_timevals())
-        mov     rsi, rax                 ; write adress of last tv in rsi (for compare_timevals())
-        call    compare_timevals         ; compaires tv at rdi and rsi 
-        cmp     rax, 1                   ; rax: 0 (rdi<rsi), 1 (rdi==rsi), 2 (rdi>rsi), 
-        je      .exit_found              ; if equal -> found already
-        ja      .exit_not_found          ; if smaller the tv is not in the list
+        mov     rdi, [listSize]         ; write current list size in rdi
+        dec     rdi                     ; decrement it (getting last tv's index)
+        mov     rbx, rdi                ; current comparison at last (for return) 
+        call    get_adress_by_index     ; get adress from index in rdi in rax
+        mov     rdi, r10                ; write adress of given tv in rdi (for compare_timevals())
+        mov     rsi, rax                ; write adress of last tv in rsi (for compare_timevals())
+        call    compare_timevals        ; compaires tv at rdi and rsi 
+        cmp     rax, 1                  ; rax: 0 (rdi<rsi), 1 (rdi==rsi), 2 (rdi>rsi), 
+        je      .exit_found             ; if equal -> found already
+        ja      .exit_not_found         ; if smaller the tv is not in the list
         
-        ; define bounds (r11, r13)
-        mov     r11, 0                   ; lower border
-        mov     r13, [listSize]     
-        dec     r13                      ; higher border
+        ; start binary search loop
+        ; define borders (r11, r13)
+        mov     r11, 0                  ; set lower border
+        mov     r13, [listSize]
+        dec     r13                     ; set higher border
 
 .loop:
 
         ; get middle of borders (r12)
         mov     rax, r13
-        sub     rax, r11
-        mov     r14, 2
-        xor     rdx, rdx
+        sub     rax, r11                ; rax: higher border - lower border
+        mov     r14, 2                  ; set divisor
+        xor     rdx, rdx                ; clear output register
         div     r14
-        add     rax, r11
-        mov     r12, rax                 ; middle of borders
+        add     rax, r11                ; add lower border to get middle
+        mov     r12, rax                ; save middle of borders
 
         ; compair middle with 
-        mov     rbx, r12                 ; current comparison at middle (for return) 
+        mov     rbx, r12                ; current comparison at middle (for return) 
+        ; call long get_address_by_index(int index);
         mov     rdi, r12
-        call    get_adress_by_index      ; get middle adress
-        mov     rdi, r10                 ; write adress of given tv in rdi (for compare_timevals())
-        mov     rsi, rax                 ; write middle adress in rsi (for compare_timevals())
+        call    get_adress_by_index     ; get middle adress
+
+        ; call int compare_timevals(struct timeval *tv1, struct timeval *tv2)
+        mov     rdi, r10                ; write adress of given tv in rdi (for compare_timevals())
+        mov     rsi, rax                ; write middle adress in rsi (for compare_timevals())
         call    compare_timevals
         cmp     rax, 1
         jb      .lower
@@ -291,12 +295,11 @@ list_find:
 
         ; check if lower border == middle 
         cmp     r11, r12
-        cmove   r11, r13
+        cmove   r11, r13                ; if lower border == middle -> set higher border to lower border -> force checking higher border value
 
-        ; lower bound = middle
+        ; if not: lower bound = middle
         cmovne     r11, r12
         jmp    .loop
-
 
 .exit_not_found:
 
@@ -321,7 +324,7 @@ list_find:
 
 
 ;-----------------------------------------------------------------------------
-; extern int get_adress_by_index(int index);
+; extern long get_adress_by_index(int index);
 ; rdi (index) -> rax (adress)   NOTE: can be improved 
 ;-----------------------------------------------------------------------------
         global get_adress_by_index:function
@@ -437,22 +440,15 @@ list_get:
         jl      .not_found                      ; if so, return false
 
 
-        ; get the adress of the list element with the given index
+        ; get the offset to the adress of the given index
+        mov     rax, rsi                        ; load the index into rax
+        mov     rbx, 16                         ; set the offset for one address in rbx (multiplyer)
+        xor     rdx, rdx                        ; clear the output register
+        mul     rbx                             ; rax * rbx = offset
+
+        ; calculate the adress of the given index (rbx)
         mov     rbx, [startAdress]              ; load the start adress of the list into rbx
-        xor     rcx, rcx                        ; clear rcx (counter = 0)
-
-.loop:
-
-        ; check if the counter is equal the index
-        cmp     rcx, rsi                        ; check if the counter is equal the index
-        je      .loop_exit                      ; if so, exit the loop
-
-        ; increment the adress by 16 and the counter by 1
-        add     rbx, 16                         ; add 16 to the current adress
-        inc     rcx                             ; increment the counter
-        jmp     .loop                           ; go to the next element of the list
-
-.loop_exit:
+        add     rbx, rax                        ; add the offset to the start adress to get the adress of the given index
 
         ; get the timeval.tv_sec of the list element with the given index
         mov     rax, [rbx]                      ; load the tv_sec of the list element into rax
